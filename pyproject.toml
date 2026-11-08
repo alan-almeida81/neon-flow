@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "neon-flow"
+version = "0.1.0"
+description = "Console cyberpunk do fluxo de agentes do Maestri (Maestri Wire): mapa ao vivo, avisos de decisão e terminal completo."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE", "web/vendor/xterm/LICENSE"]
+requires-python = ">=3.11"
+dependencies = ["cryptography>=43", "keyring>=25"]
+
+[project.scripts]
+neon-flow = "neon_flow.__main__:main"
+
+[tool.setuptools]
+packages = ["neon_flow"]

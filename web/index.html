@@ -1,0 +1,1955 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neon Flow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07070d; --bg2:#0d0c16; --panel:#110f1c; --line:#3a1520;
+  --red:#ff4d5e; --red-dim:#7a2230; --red-deep:#2a0b12;
+  --cyan:#3ef2ff; --cyan-dim:#0f5560; --yellow:#f5ec2a; --yellow-dim:#5e5a12;
+  --green:#4dffa6; --text:#f2d9dc; --muted:#8e6b72; --fail:#ff2a4f; --bg:#07070d;
+  --head:"Rajdhani","Bahnschrift SemiCondensed","Bahnschrift","Arial Narrow",sans-serif;
+  --mono:"Share Tech Mono","Cascadia Mono","Consolas",monospace;
+  --cut:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px));
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--head);overflow-x:hidden;
+  background-image:radial-gradient(ellipse at 20% -10%,var(--red-deep) 0,transparent 55%),
+  radial-gradient(ellipse at 110% 110%,#06262c 0,transparent 50%),
+  linear-gradient(var(--bg),var(--bg));background-attachment:fixed;}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:50;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px);mix-blend-mode:overlay}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.35;
+  background-image:linear-gradient(rgba(120,200,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(120,200,255,.05) 1px,transparent 1px);
+  background-size:48px 48px}
+.mono{font-family:var(--mono)}
+/* ---------- top bar ---------- */
+header{position:relative;z-index:2;display:flex;align-items:stretch;gap:14px;padding:14px 18px 10px;flex-wrap:wrap}
+.brand{background:var(--yellow);color:#111;clip-path:var(--cut);padding:6px 22px 4px 14px;display:flex;flex-direction:column;justify-content:center}
+.brand b{font-size:26px;letter-spacing:.14em;line-height:1;font-weight:700}
+.brand small{font-family:var(--mono);font-size:10px;letter-spacing:.2em}
+.glitch{position:relative}
+.glitch::before,.glitch::after{content:attr(data-text);position:absolute;inset:0;overflow:hidden}
+.glitch::before{color:var(--red);transform:translate(2px,0);clip-path:inset(0 0 60% 0);animation:gl 3.7s infinite steps(1)}
+.glitch::after{color:var(--cyan);transform:translate(-2px,0);clip-path:inset(55% 0 0 0);animation:gl 2.9s infinite steps(1) reverse}
+@keyframes gl{0%,92%{opacity:0}93%{opacity:1;transform:translate(3px,-1px)}96%{transform:translate(-3px,1px)}100%{opacity:0}}
+.stat{border:1px solid var(--red-dim);background:linear-gradient(180deg,rgba(255,77,94,.08),transparent);clip-path:var(--cut);
+  padding:6px 14px;min-width:120px;display:flex;flex-direction:column;justify-content:center}
+.stat label{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.18em;text-transform:uppercase}
+.stat span{font-size:20px;font-weight:700;letter-spacing:.06em;color:var(--red);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:42vw}
+.stat.cy span{color:var(--cyan)} .stat.ye span{color:var(--yellow)}
+.stat.alert{border-color:var(--yellow);animation:pulse 1.2s infinite}
+.spacer{flex:1}
+.link{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.dot{width:9px;height:9px;background:var(--fail);box-shadow:0 0 10px var(--fail)}
+.dot.on{background:var(--cyan);box-shadow:0 0 10px var(--cyan);animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.45}}
+.ground{position:relative;z-index:2;margin:0 18px 10px;display:flex;gap:12px;align-items:center;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.ground .bar{flex:0 0 160px;height:6px;background:var(--red-deep);position:relative}
+.ground .bar i{position:absolute;inset:0 auto 0 0;background:var(--red);box-shadow:0 0 8px var(--red)}
+.ground em{font-style:normal;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* ---------- layout ---------- */
+main{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;padding:0 18px 70px}
+.stage{position:relative;height:calc(100vh - 230px);min-height:460px;border:1px solid var(--red-dim);clip-path:var(--cut);
+  background:radial-gradient(ellipse at 50% 40%,rgba(45,226,230,.05),transparent 70%),rgba(7,7,13,.6);overflow:hidden;touch-action:none}
+.stage canvas{display:block;width:100%;height:100%;cursor:grab}
+.stage canvas.drag{cursor:grabbing}
+.legend{position:absolute;left:12px;bottom:10px;display:flex;gap:12px;flex-wrap:wrap;font-family:var(--mono);font-size:10px;color:var(--muted);pointer-events:none}
+.legend i{display:inline-block;width:14px;height:3px;margin-right:5px;vertical-align:middle}
+.scene-ui{position:absolute;left:12px;top:8px;display:flex;gap:8px;align-items:center;font-family:var(--mono);font-size:11px}
+.scene-ui .crumb{color:var(--cyan);letter-spacing:.18em;text-shadow:0 0 6px rgba(62,242,255,.6)}
+.scene-ui button{background:rgba(62,242,255,.08);border:1px solid var(--cyan);color:var(--cyan);font-family:var(--mono);font-size:11px;
+  letter-spacing:.12em;padding:3px 10px;cursor:pointer;clip-path:polygon(0 0,calc(100% - 7px) 0,100% 7px,100% 100%,7px 100%,0 calc(100% - 7px))}
+.scene-ui button:hover,.scene-ui button:focus-visible{background:var(--cyan);color:#111;outline:none}
+.stage canvas:focus-visible{outline:1px solid var(--yellow);outline-offset:-1px}
+.maxbtn{position:absolute;right:10px;top:6px;z-index:3;background:rgba(62,242,255,.08);border:1px solid var(--cyan);color:var(--cyan);font-family:var(--mono);
+  font-size:11px;letter-spacing:.12em;padding:3px 10px;cursor:pointer;clip-path:polygon(0 0,calc(100% - 7px) 0,100% 7px,100% 100%,7px 100%,0 calc(100% - 7px))}
+.maxbtn:hover,.maxbtn:focus-visible{background:var(--cyan);color:#111;outline:none}
+body.maxed{overflow:hidden} body.maxed main{z-index:15}
+.stage.max{position:fixed;inset:0;z-index:10;height:auto;min-height:0;clip-path:none;border:0;background-color:#07070d}
+.hint{position:absolute;right:200px;top:8px;font-family:var(--mono);font-size:10px;color:var(--muted);pointer-events:none}
+.theme{position:relative;align-self:center}
+.theme>button{background:transparent;border:1px solid var(--yellow);color:var(--yellow);font-family:var(--mono);font-size:11px;letter-spacing:.16em;
+  padding:6px 12px;cursor:pointer;clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px))}
+.theme>button:hover,.theme>button:focus-visible{background:var(--yellow);color:#111;outline:none}
+.theme-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:40;min-width:210px;background:rgba(9,8,15,.98);border:1px solid var(--red);padding:6px;display:flex;flex-direction:column;gap:4px}
+.theme-menu[hidden]{display:none}
+.menu-h{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;color:var(--muted);padding:8px 8px 2px;border-top:1px solid rgba(255,255,255,.08);margin-top:4px}
+.theme-opt{display:flex;align-items:center;gap:6px;background:transparent;border:1px solid transparent;color:var(--text);font-family:var(--mono);font-size:11px;padding:5px 8px;cursor:pointer;text-align:left}
+.theme-opt:hover,.theme-opt:focus-visible{border-color:var(--cyan);outline:none}
+.theme-opt[aria-checked="true"]{border-color:var(--yellow)}
+.theme-opt .sw{width:12px;height:12px;flex:0 0 auto}
+.theme-opt .sw:nth-child(3){margin-right:6px}
+.scene-ui button.on{background:var(--cyan);color:#111}
+.roster{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;min-height:24px}
+.roster .empty{padding:2px 0}
+.roster.map{display:grid;grid-auto-columns:max-content;gap:6px 10px;align-items:start;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin;scrollbar-color:rgba(62,242,255,.35) transparent}
+.roster.map .rc{display:flex;flex-direction:column;gap:4px;min-width:190px}
+.roster.map .rc .chip{width:100%;white-space:nowrap}
+.roster.map .rh{font-size:10px;letter-spacing:.18em;align-self:end}
+.roster.map .rx{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:flex;align-items:center;gap:6px;background:rgba(17,15,28,.85);border:1px solid var(--team,var(--red-dim));color:var(--text);
+  font-family:var(--mono);font-size:10.5px;padding:3px 8px;cursor:pointer;clip-path:polygon(0 0,calc(100% - 6px) 0,100% 6px,100% 100%,6px 100%,0 calc(100% - 6px))}
+.chip:hover,.chip:focus-visible{background:rgba(62,242,255,.12);outline:none}
+.chip i{width:7px;height:7px;background:var(--st,var(--muted))}
+.chip small{color:var(--muted)}
+.chip.att{border-color:var(--yellow)} .chip.att i{background:var(--yellow)}
+.trace{margin-top:12px;height:150px;border:1px solid var(--red-dim);clip-path:var(--cut);background:rgba(7,7,13,.6)}
+.trace canvas{display:block;width:100%;height:100%}
+.section-title{font-family:var(--mono);font-size:11px;letter-spacing:.3em;color:var(--red);margin:4px 0 8px;display:flex;align-items:center;gap:10px}
+.section-title::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--red-dim),transparent)}
+/* ---------- aside ---------- */
+aside{display:flex;flex-direction:column;gap:16px;min-width:0}
+.box{border:1px solid var(--red-dim);background:rgba(17,15,28,.85);clip-path:var(--cut);padding:10px 12px}
+.box h2{margin:0 0 8px;font-size:14px;letter-spacing:.3em;color:var(--red);font-weight:700;display:flex;justify-content:space-between}
+.box h2 small{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.1em}
+.buffer{max-height:46vh;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--red-dim) transparent}
+.ev{display:grid;grid-template-columns:58px 1fr;gap:8px;padding:5px 0;border-bottom:1px solid #22111a;font-family:var(--mono);font-size:11.5px;line-height:1.35}
+.ev time{color:var(--muted)}
+.ev .k{display:inline-block;min-width:44px;font-size:9.5px;letter-spacing:.12em;padding:0 4px;margin-right:6px;color:#111;background:var(--red)}
+.ev[data-k=state] .k{background:var(--cyan)} .ev[data-k=attention] .k{background:var(--yellow)}
+.ev[data-k=message] .k{background:var(--yellow)} .ev[data-k=tool] .k,.ev[data-k=machine] .k{background:#b58cff}
+.ev[data-k=card] .k{background:var(--green)} .ev[data-k=routine] .k{background:#ff9d4d}
+.ev.fresh{animation:fresh 1.6s ease-out}
+@keyframes fresh{from{background:rgba(62,242,255,.18)}to{background:transparent}}
+.empty{font-family:var(--mono);font-size:11px;color:var(--muted);padding:6px 0}
+.seg{display:grid;grid-template-columns:96px 1fr 28px;gap:8px;align-items:center;font-family:var(--mono);font-size:11px;margin:5px 0}
+.seg .cells{display:flex;gap:2px;height:9px}
+.seg .cells i{flex:1;background:var(--red-deep)} .seg .cells i.on{background:var(--red);box-shadow:0 0 6px var(--red)}
+.seg b{text-align:right;color:var(--text)}
+.rt{display:flex;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:11px;padding:3px 0;color:var(--muted)}
+.rt b{color:var(--text);font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rt .off{color:#5a3a40}
+/* ---------- drawer ---------- */
+.drawer{position:fixed;z-index:20;right:0;top:0;bottom:0;width:min(520px,100vw);background:rgba(9,8,15,.97);
+  border-left:2px solid var(--cyan);transform:translateX(105%);transition:transform .22s;display:flex;flex-direction:column;padding:16px 18px;gap:10px}
+.drawer.open{transform:none}
+.drawer h3{margin:0;font-size:28px;letter-spacing:.12em;text-transform:uppercase;color:var(--cyan)}
+.drawer .close{position:absolute;right:14px;top:12px;background:none;border:1px solid var(--red);color:var(--red);font-family:var(--mono);cursor:pointer;padding:3px 8px}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:4px 10px;font-family:var(--mono);font-size:12px}
+.kv dt{color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-size:10.5px;padding-top:1px}
+.kv dd{margin:0;word-break:break-word}
+.drawer pre{margin:0;flex:1;min-height:120px;overflow:auto;background:#050509;border:1px solid var(--cyan-dim);padding:10px;
+  font-family:var(--mono);font-size:11.5px;color:#bff8ff;white-space:pre-wrap;word-break:break-word}
+.drawer .note{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+/* ---------- ticker ---------- */
+footer{position:fixed;z-index:10;left:0;right:0;bottom:0;height:30px;background:var(--red);color:#13060a;overflow:hidden;display:flex;align-items:center;
+  font-family:var(--mono);font-size:12px;letter-spacing:.08em}
+footer .tag{flex:0 0 auto;background:repeating-linear-gradient(135deg,#111 0 8px,var(--red) 8px 16px);color:#111;text-shadow:0 0 2px var(--red),0 0 6px var(--red);height:100%;display:grid;place-items:center;padding:0 12px;font-weight:700;letter-spacing:.2em}
+footer .run{white-space:nowrap;animation:tick 60s linear infinite;padding-left:100%}
+@keyframes tick{to{transform:translateX(-100%)}}
+.toast{position:fixed;z-index:30;left:50%;top:14px;transform:translateX(-50%);background:var(--fail);color:#111;font-family:var(--mono);
+  padding:6px 14px;clip-path:var(--cut);display:none}
+.toast.show{display:block}
+@media (max-width:1100px){main{grid-template-columns:minmax(0,1fr)}.buffer{max-height:40vh}.stage{height:62vh}}
+@media (max-width:640px){header{padding:10px 16px}main{padding:0 16px 70px}.ground{margin:0 16px 10px}.ground .bar{flex-basis:80px}.stat{min-width:0;flex:1 1 40%}.stat span{font-size:16px}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+/* full terminal (read-only), same Wire stream as Orbita */
+.termbtn{display:block;width:100%;margin:0 0 8px;background:rgba(62,242,255,.08);border:1px solid var(--cyan);color:var(--cyan);font-family:var(--mono);font-size:11px;letter-spacing:.18em;padding:7px 10px;cursor:pointer;text-align:left}
+.termbtn:hover,.termbtn:focus-visible{background:var(--cyan);color:#111;outline:none}
+#term{width:min(1180px,calc(100vw - 32px));height:min(740px,calc(100dvh - 32px));max-width:none;max-height:none;padding:0;background:#05060a;color:var(--text);border:1px solid var(--cyan);
+  box-shadow:0 0 0 1px rgba(62,242,255,.18),0 0 36px rgba(62,242,255,.22),0 30px 120px #000}
+#term[open]{display:flex;flex-direction:column;animation:termIn .28s steps(6) both}
+@keyframes termIn{0%{clip-path:inset(50% 0 50% 0);filter:brightness(2.4)}60%{clip-path:inset(4% 0 4% 0)}100%{clip-path:inset(0 0 0 0);filter:none}}
+#term::backdrop{background:rgba(3,3,8,.8);backdrop-filter:blur(2px)}
+#term.full{width:calc(100vw - 12px);height:calc(100dvh - 12px)}
+#term header{display:flex;align-items:center;gap:12px;padding:9px 12px 9px 14px;border-bottom:1px solid var(--cyan-dim);background:linear-gradient(90deg,rgba(62,242,255,.14),transparent 70%)}
+#termTitle{font-family:var(--head);font-weight:700;letter-spacing:.14em;color:var(--cyan);font-size:18px;white-space:nowrap}
+#termStatus{flex:1;font-family:var(--mono);font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#termStatus.on{color:var(--green)}
+#term header button{background:rgba(62,242,255,.08);border:1px solid var(--cyan);color:var(--cyan);font-family:var(--mono);font-size:11px;letter-spacing:.14em;padding:5px 9px;cursor:pointer}
+#term header button:hover,#term header button:focus-visible{background:var(--cyan);color:#111;outline:none}
+#termOut{flex:1;min-height:0;padding:10px 12px;overflow:auto;background:#05060a;position:relative}
+#termOut .xterm{width:max-content;min-width:100%;height:100%}
+#term .termfoot{padding:6px 14px;background:#05060a;border-top:1px solid var(--cyan-dim);font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--muted)}
+
+/* decision / failure messages: one card per agent that needs the operator */
+.asks{position:absolute;z-index:4;inset:0;overflow:hidden;pointer-events:none}
+.ask{pointer-events:auto;position:absolute;left:0;top:0;width:min(360px,calc(100% - 20px));will-change:transform;background:rgba(8,8,14,.94);border:1px solid var(--yellow);border-left-width:4px;padding:9px 11px 10px;font-family:var(--mono);color:var(--text);
+  box-shadow:0 0 0 1px rgba(0,0,0,.6),0 0 22px color-mix(in srgb,var(--yellow) 35%,transparent)}
+.ask.enter{animation:askIn .35s steps(5) both}
+.ask.fail{border-color:var(--fail);box-shadow:0 0 0 1px rgba(0,0,0,.6),0 0 22px color-mix(in srgb,var(--fail) 40%,transparent)}
+.ask::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--yellow) 18%,transparent),transparent);background-size:40% 100%;background-repeat:no-repeat;animation:askScan 2.6s linear infinite}
+.ask.fail::after{background-image:linear-gradient(90deg,transparent,color-mix(in srgb,var(--fail) 18%,transparent),transparent)}
+@keyframes askIn{0%{clip-path:inset(0 100% 0 0);filter:brightness(2)}100%{clip-path:inset(0 0 0 0);filter:none}}
+@keyframes askScan{0%{background-position:-60% 0}100%{background-position:160% 0}}
+.ask-h{display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.22em;color:var(--yellow)}
+.ask.fail .ask-h{color:var(--fail)}
+.ask-h b{flex:1;font-weight:700}.ask-h .blink{width:8px;height:8px;background:currentColor;box-shadow:0 0 8px currentColor;animation:pulse 1s infinite}
+.ask-t{color:var(--muted);letter-spacing:.06em}
+.ask-n{margin:5px 0 4px;font-family:var(--head);font-weight:700;font-size:17px;letter-spacing:.06em;color:var(--text)}
+.ask-n small{font-family:var(--mono);font-weight:400;font-size:11px;color:var(--muted);letter-spacing:.04em}
+.ask-q{font-size:12px;line-height:1.45;color:var(--text);white-space:pre-wrap;word-break:break-word;max-height:5.8em;overflow:hidden;border-left:2px solid color-mix(in srgb,var(--yellow) 45%,transparent);padding-left:8px}
+.ask.fail .ask-q{border-left-color:color-mix(in srgb,var(--fail) 45%,transparent)}
+.ask-a{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.ask-a button{background:transparent;border:1px solid var(--cyan);color:var(--cyan);font-family:var(--mono);font-size:10px;letter-spacing:.14em;padding:4px 7px;cursor:pointer}
+.ask-a button:hover,.ask-a button:focus-visible{background:var(--cyan);color:#111;outline:none}
+.ask-a button.quiet{border-color:var(--muted);color:var(--muted)}
+.ask-a button.quiet:hover{background:var(--muted);color:#111}
+.ask[data-side=r]::before,.ask[data-side=l]::before{content:"";position:absolute;top:16px;border:8px solid transparent}
+.ask[data-side=r]::before{left:-20px;border-right-color:var(--yellow)}.ask[data-side=l]::before{right:-17px;border-left-color:var(--yellow)}
+.ask.fail[data-side=r]::before{border-right-color:var(--fail)}.ask.fail[data-side=l]::before{border-left-color:var(--fail)}
+.ask-more{pointer-events:auto;position:absolute;right:10px;bottom:34px;font-family:var(--mono);font-size:11px;color:var(--yellow);background:rgba(8,8,14,.9);border:1px solid var(--yellow-dim);padding:3px 8px}
+@media (prefers-reduced-motion:reduce){.ask,.ask::after,.ask-h .blink{animation:none}}
+
+#termForm{display:flex;gap:10px;align-items:stretch;padding:10px 12px;border-top:1px solid var(--cyan-dim);background:#070912}
+#termInput{flex:1;min-height:44px;max-height:160px;resize:vertical;background:#03040a;color:var(--text);border:1px solid var(--cyan-dim);padding:8px 10px;font:13px/1.4 "Cascadia Code",Consolas,monospace}
+#termInput:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan),0 0 14px rgba(62,242,255,.25)}
+#termInput::placeholder{color:var(--muted)}
+#termSend{min-width:150px;background:var(--cyan);color:#081014;border:0;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.16em;cursor:pointer}
+#termSend:disabled{opacity:.45;cursor:default}
+#termSend:not(:disabled):hover{filter:brightness(1.15)}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><b class="glitch" data-text="NEON//FLOW">NEON//FLOW</b><small>MAESTRI WIRE · AGENT FLOW</small></div>
+  <div class="stat"><label>Workspace</label><span id="ws">—</span></div>
+  <div class="stat cy"><label>Agentes em execução</label><span id="live">0</span></div>
+  <div class="stat ye" id="attBox"><label>Atenção</label><span id="att">0</span></div>
+  <div class="stat"><label>Reserva ativa</label><span id="run">nenhuma</span></div>
+  <div class="spacer"></div>
+  <div class="theme"><button id="themeBtn" aria-haspopup="menu" aria-expanded="false" title="Cores do tema">TEMA ◈</button>
+    <div class="theme-menu" id="themeMenu" role="menu" hidden></div></div>
+  <div class="link"><span class="dot" id="dot"></span><span id="linkText">conectando…</span><span id="clock"></span></div>
+</header>
+<div class="ground"><span>STATUS//</span><div class="bar"><i id="gbar" style="width:0"></i></div><em id="gtext">—</em></div>
+<main>
+  <section>
+    <div class="section-title">CONSOLE // MÓDULOS · CIRCUITOS · FERRAMENTAS</div>
+    <div class="stage" id="stage"><div class="asks" id="asks" aria-live="assertive"></div><canvas id="graph" tabindex="0" aria-label="Console dos agentes: clique num módulo para focar; Esc volta"></canvas>
+      <div class="scene-ui"><span class="crumb" id="crumb">CONSOLE</span>
+        <button id="modeLive" class="on" aria-pressed="true">AO VIVO</button><button id="modeAll" aria-pressed="false">TODOS</button>
+        <button id="back" hidden>◂ VOLTAR · ESC</button><button id="dataBtn" hidden>DADOS ▸</button></div>
+      <button class="maxbtn" id="maxBtn" aria-pressed="false" title="Ocupar a tela inteira (Esc volta)">⛶ TELA CHEIA</button>
+      <div class="hint">clique: focar · arrastar: mover · roda: zoom · duplo clique: visão geral · ←→ agentes</div>
+      <div class="legend"><span><i style="background:linear-gradient(90deg,#2de2e6,#ff3ec8,#fcee0a,#4dffa6)"></i>conexão do canvas Maestri energizada = troca ativa (cada circuito com cor própria)</span>
+        <span><i style="background:var(--red-dim)"></i>conexão ociosa</span><span><i style="background:#ffb547"></i>ferramenta do turno</span>
+        <span><i style="background:#c27bff"></i>skill</span></div></div>
+    <div class="section-title" style="margin-top:12px" id="rosterTitle">EM ESPERA // FORA DA CENA</div>
+    <div class="roster" id="roster"></div>
+    <div class="section-title" style="margin-top:12px">TRACE // LINHA DO TEMPO DA SESSÃO</div>
+    <div class="trace"><canvas id="trace" aria-label="Linha do tempo"></canvas></div>
+  </section>
+  <aside>
+    <div class="box"><h2>BUFFER <small id="evCount">0 eventos</small></h2><div class="buffer" id="buffer"><div class="empty">Aguardando transições…</div></div></div>
+    <div class="box"><h2>QUADRO <small id="boardNote">Trello</small></h2><div id="shelves"></div></div>
+    <div class="box"><h2>ROTINAS <small>Maestri</small></h2><div id="routines"><div class="empty">—</div></div></div>
+  </aside>
+</main>
+<div class="drawer" id="drawer" role="dialog" aria-modal="false" aria-labelledby="dName">
+  <button class="close" id="dClose" aria-label="Fechar">ESC ✕</button>
+  <div class="section-title" style="margin-top:4px">SCAN // AGENTE</div>
+  <h3 id="dName">—</h3>
+  <dl class="kv" id="dKv"></dl>
+  <div class="section-title">CAUDA DO TERMINAL</div>
+  <button class="termbtn" id="dTerm" type="button">▶ ABRIR TERMINAL COMPLETO</button>
+  <pre id="dTail"></pre>
+  <div class="note">A cauda é o preview do Wire: pode estar incompleta e não comprova conclusão. Para responder ao agente, abra o terminal completo.</div>
+</div>
+<dialog id="term" aria-labelledby="termTitle">
+  <header><b id="termTitle">TERMINAL</b><span id="termStatus" role="status">—</span>
+    <button id="termExpand" type="button" aria-pressed="false">⛶ AMPLIAR</button><button id="termClose" type="button">ESC ✕</button></header>
+  <div id="termOut" role="region" aria-label="Saída do terminal"></div>
+  <form id="termForm"><textarea id="termInput" maxlength="20000" rows="2" aria-label="Comando ou instrução para o agente" placeholder="Digite um comando ou a resposta para o agente…"></textarea><button id="termSend" type="submit">ENVIAR ▸</button></form>
+  <div class="termfoot">Ctrl+Enter envia · Enter quebra linha · o texto vai ao terminal pelo Maestri Wire, como um prompt; confira a resposta acima antes de repetir.</div>
+</dialog>
+<div class="toast" id="toast"></div>
+<footer><div class="tag">LIVE</div><div class="run" id="ticker">sincronizando com o Maestri Wire…</div></footer>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const DEMO = new URLSearchParams(location.search).has("demo");
+const REDUCE = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const C = {red:"#ff4d5e", redDim:"#7a2230", redDeep:"#2a0b12", cyan:"#3ef2ff", yellow:"#f5ec2a", green:"#4dffa6",
+  amber:"#ffb547", violet:"#c27bff", magenta:"#ff4fd8", text:"#f2d9dc", muted:"#8e6b72", panel:"rgba(9,11,22,.94)", fail:"#ff2a4f"};
+// Cyberpunk palettes: primary = chrome/frames, live = executing, accent = highlights/attention.
+const THEMES = {
+  "neon":        {name:"Neon (amarelo · ciano · rosa)", primary:"#fcee0a", dim:"#5c5710", deep:"#1d1b05", live:"#2de2e6", accent:"#ff3ec8", text:"#eef3f5", muted:"#7f8a96", bg:"#06080d"},
+  "synthwave":   {name:"Synthwave (rosa · ciano)",      primary:"#ff3ec8", dim:"#6e1a5c", deep:"#250a22", live:"#2de2e6", accent:"#fcee0a", text:"#f6e4f2", muted:"#8f7a8c", bg:"#0a0614"},
+  "matriz":      {name:"Matriz (verde · ciano)",        primary:"#33ff8a", dim:"#16603a", deep:"#06200f", live:"#2de2e6", accent:"#fcee0a", text:"#dcf7e6", muted:"#6a8c76", bg:"#030805"},
+  "azul-hud":    {name:"Azul HUD (azul · amarelo)",     primary:"#2f8cff", dim:"#163a6e", deep:"#07142a", live:"#2de2e6", accent:"#fcee0a", text:"#e2ecfa", muted:"#6f83a0", bg:"#04070f"},
+  "gelo":        {name:"Gelo (ciano · rosa)",           primary:"#2de2e6", dim:"#145a6e", deep:"#061d26", live:"#ff3ec8", accent:"#fcee0a", text:"#dcf3fa", muted:"#6c8f98", bg:"#04090f"},
+  "ultravioleta":{name:"Ultravioleta (violeta · verde)",primary:"#a46bff", dim:"#46287a", deep:"#160b2c", live:"#4dffd2", accent:"#ff3ec8", text:"#ece4fa", muted:"#80739a", bg:"#07040f"},
+};
+let theme = "neon";
+function applyTheme(id){
+  const t = THEMES[id] || THEMES.neon; theme = THEMES[id] ? id : "neon";
+  Object.assign(C, {red:t.primary, redDim:t.dim, redDeep:t.deep, cyan:t.live, yellow:t.accent, text:t.text, muted:t.muted});
+  if (typeof STATE_COLOR !== "undefined") Object.assign(STATE_COLOR, {working:C.cyan, interrupted:C.fail, failed:C.fail, unknown:C.muted});
+  const root = document.documentElement.style, hexA = (h,a)=>`${h}${Math.round(a*255).toString(16).padStart(2,"0")}`;
+  for (const [k,v] of Object.entries({"--red":t.primary,"--red-dim":t.dim,"--red-deep":t.deep,"--cyan":t.live,"--cyan-dim":hexA(t.live,.35),
+    "--yellow":t.accent,"--yellow-dim":hexA(t.accent,.35),"--text":t.text,"--muted":t.muted,"--bg":t.bg})) root.setProperty(k,v);
+  document.querySelectorAll(".theme-opt[data-theme]").forEach(b=>b.setAttribute("aria-checked", b.dataset.theme===theme));
+  try { localStorage.setItem("fluxo-neon-theme", theme); } catch (_) {}
+}
+const MONO = s => `${s||11}px "Share Tech Mono", "Cascadia Mono", Consolas, monospace`;
+const HEADF = s => `700 ${s}px Rajdhani, "Bahnschrift SemiCondensed", Bahnschrift, "Arial Narrow", sans-serif`;
+const STATE = {working:"EXEC", completed:"CONCLUÍDO", interrupted:"INTERROMPIDO", failed:"FALHA", unknown:"OCIOSO"};
+const RING = {working:"EX", completed:"OK", interrupted:"!!", failed:"!!", unknown:"--"};
+const STATE_COLOR = {working:C.cyan, completed:C.green, interrupted:C.fail, failed:C.fail, unknown:C.muted};
+const KIND = {state:"ESTADO", attention:"ALERTA", tool:"TOOL", machine:"SKILL", message:"MSG", note:"NOTA", routine:"ROTINA", card:"CARD"};
+const SHELVES = [["a-triar","A triar"],["triados","Triados"],["andamento","Em andamento"],["revisao","Em revisão"],["revisado","Revisado"],["concluido","Concluído"]];
+const STAGE_SHELF = {triagem:"a-triar", analise:"triados", implementacao:"andamento", revisao:"revisao", integracao:"revisado"};
+const STAGE_LABEL = {triagem:"TRIAGEM", analise:"ANÁLISE", implementacao:"IMPLEMENTAÇÃO", revisao:"REVISÃO", integracao:"INTEGRAÇÃO",
+  orquestrador:"ORQUESTRAÇÃO", consultor:"CONSULTOR", vigia:"VIGIA", auxiliar:"AUXILIAR"};
+const RUN_STATUS = {claiming:"reservando", active:"implementando", reviewing:"em revisão", reviewed:"revisado", failed:"falhou", cancelled:"cancelado"};
+const TEAM = [[/t[ée]rreo/i, "#fcee0a"], [/alfa/i, "#2de2e6"], [/beta/i, "#4dffa6"], [/gama/i, "#ff3ec8"]];
+const COLW = 270, ROWH = 175, CTRL_Y = -300, HEAD_Y = -96, BUS_Y = -150;
+const PW = 200, PH = 92, CW = 164, CH = 70, NW = 150, NH = 34, MAX_TOOLS = 2, LINGER = 6000;
+
+const LIVE_ABOVE = 30, LIVE_BELOW = 74, JOG = 12;   // live: clearance for the stage label (above), tool chips (below); 45° jog size
+let data = null, evSig = "", selected = null, lastEvent = 0, mode = "live";
+
+function hash(str){let h=2166136261;for(const c of String(str)){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
+// Per-page-load seed: wiring choices (jog spots, AMBOS styles, junctions, cable wear, colours) change on every open
+// but stay stable while the page is open, so routes never flicker between frames.
+const SESSION = (Math.random()*4294967296)>>>0;
+const shash = key => hash(SESSION+"|"+key), srand = key => shash(key)%10000/10000;
+function ago(ms){if(!ms)return "—";const s=Math.max(0,(Date.now()-ms)/1000);
+  return s<60?`${s|0}s`:s<3600?`${(s/60)|0}min`:s<86400?`${(s/3600)|0}h`:`${(s/86400)|0}d`}
+function hhmm(ms){return new Date(ms).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}
+function every(sec){return !sec?"":sec<120?`${sec}s`:sec<7200?`${Math.round(sec/60)}min`:`${Math.round(sec/3600)}h`}
+function floorOrder(name){return /t[ée]rreo/i.test(name)?0:1}
+function teamName(floor){return String(floor||"").replace(/^Equipe\s+/i,"").toUpperCase()}
+function teamColor(floor){const t=TEAM.find(([re])=>re.test(floor||""));return t?t[1]:C.red}
+// Terminal colours come from the Maestri canvas; red hues are reserved for failures, so they render as neon pink.
+function hex6(v,fallback){
+  if (!/^#[0-9a-f]{6}/i.test(v||"")) return fallback;
+  const n=parseInt(v.slice(1,7),16), r=(n>>16&255)/255, g=(n>>8&255)/255, b=(n&255)/255, mx=Math.max(r,g,b), d=mx-Math.min(r,g,b);
+  if (d<.25 || mx!==r) return v.slice(0,7);
+  const hue = (((g-b)/d)%6+6)%6*60; return hue<20 || hue>340 ? "#ff3ec8" : v.slice(0,7);
+}
+function rgba(hex,a){const n=parseInt(hex.slice(1,7),16);return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`}
+function fit(c,text,w){text=String(text??"");if(c.measureText(text).width<=w)return text;
+  let e=text.length;while(e>1&&c.measureText(text.slice(0,e)+"…").width>w)e--;return text.slice(0,e)+"…"}
+const ease = t => t<.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2;
+const STAGE_ORDER = ["triagem","analise","implementacao","revisao","integracao"];
+
+/* ================= scene model ================= */
+const vis = new Map();      // agent id -> {x,y,tx,ty,alpha,flash,flashColor,boot,glitch,keep}
+const noteVis = new Map();  // note id -> {x,y,tx,ty,alpha}
+const tools = new Map();    // agentId|tool -> {agent,name,born,gone,slot}
+const history = new Map();  // agent id -> [{state,attention,from,to}]
+const toolTicks = [];       // {agent,at,name}
+let layout = {rows:[], stages:[], pos:{}, notePos:{}, width:0, visible:new Set(), notes:new Set(), hub:null};
+let camera = {x:0, y:0, z:1}, fitted = false, prev = new Map(), autoKey = "", lastManual = 0;
+let scene = {mode:"overview", target:null, since:0};   // overview | team | agent
+let tween = null;                                       // {from,to,t0,dur,label,sub}
+
+function isControl(a){return a.kind!=="stage"}
+function isChief(a){return a.manager||a.slot==="orquestrador"}
+function size(a){return isControl(a) ? (isChief(a) ? [CW+36, CH+8] : [CW, CH]) : [PW, PH]}
+function managerOf(d){return d.agents.find(a=>a.manager) || d.agents.find(a=>a.slot==="orquestrador")}
+function agentById(id){return data && data.agents.find(a=>a.id===id)}
+function routinesOf(a){return (data.routines||[]).filter(r=>r.terminal===a.id)}
+
+// Live mode keeps only agents executing now, plus a short linger so the completion is visible.
+function liveSet(d, now){
+  const ids = new Set();
+  for (const a of d.agents){ const v = vis.get(a.id); if (a.state==="working" || a.state==="failed" || a.attention || (v && v.keep > now)) ids.add(a.id); }
+  for (const c of d.connections||[]) if (c.active){ if (c.from) ids.add(c.from); if (c.to) ids.add(c.to); }
+  return ids;
+}
+function computeLayout(d, now){
+  const stages = d.stages.map((s,i)=>({...s, x:i*COLW}));
+  const pos = {}, notePos = {};
+  const hub = managerOf(d);
+  if (mode === "all"){
+    const floors = [...new Set([...(d.floors||[]).map(f=>f.name), ...d.agents.filter(a=>a.kind==="stage").map(a=>a.floor)])]
+      .filter(Boolean).sort((a,b)=>floorOrder(a)-floorOrder(b)||a.localeCompare(b));
+    const info = Object.fromEntries((d.floors||[]).map(f=>[f.name,f]));
+    const rows = floors.map((name,i)=>({name, y:i*ROWH, info:info[name]||{}, color:teamColor(name), run:(d.laneRuns||{})[teamName(name).charAt(0)+teamName(name).slice(1).toLowerCase()]}));
+    for (const st of stages) for (const r of rows){
+      const here = d.agents.filter(a=>a.kind==="stage" && a.slot===st.id && a.floor===r.name);
+      here.forEach((a,i)=>pos[a.id]=[st.x, r.y + (i-(here.length-1)/2)*(PH+14)]);
+    }
+    const mid = (stages.length-1)*COLW/2;
+    // Wide screens: the hub heads a control column left of the team labels; the stage grid keeps the middle.
+    const control = d.agents.filter(isControl).sort((a,b)=>(isChief(b)-isChief(a))||a.name.localeCompare(b.name));
+    const xc = -COLW/2 - 170 - 56 - (CW+36)/2, hubY = HEAD_Y + 14;
+    control.forEach((a,i)=>{ pos[a.id] = [xc, i===0 ? hubY : hubY + (CH+8)/2 + 34 + CH/2 + (i-1)*(CH+22)]; });
+    // Notes: one column right of every module, with a channel reserved for one corridor per note.
+    const right = Math.max(...Object.values(pos).map(p=>p[0]), mid) + PW/2, channel = 40 + (d.notes||[]).length*(LANE+4);
+    (d.notes||[]).forEach((n,i)=>notePos[n.id]=[right+channel+NW/2, HEAD_Y-4+i*(NH+14)]);
+    const ctrlBottom = Math.max(...control.map(a=>pos[a.id][1]+size(a)[1]/2), hubY);
+    layout = {rows, stages, pos, notePos, width:(stages.length-1)*COLW, visible:new Set(d.agents.map(a=>a.id)), notes:new Set((d.notes||[]).map(n=>n.id)), hub,
+      ctrl:{x:xc, bottom:ctrlBottom, n:control.length}};
+    return;
+  }
+  const visible = liveSet(d, now);
+  // Live mode follows the operator's sketch: the hub in the middle row, Vigia above, Integrador below,
+  // Lumen on the left and Concierge on the right; each team is a column further right (Prisma on top,
+  // Forja in the hub row, Sentinela below). Only modules in use are shown and empty columns collapse.
+  // Other terminals and live notes stack around Lumen, reached through corridors off the hub's left edge.
+  const workers = d.agents.filter(a=>visible.has(a.id) && !isChief(a));
+  const liveNotes = (d.notes||[]).filter(n=>(d.connections||[]).some(c=>c.note===n.id && c.active));
+  const wired = hub && (d.connections||[]).some(c=>(c.from===hub.id && visible.has(c.to)) || (c.to===hub.id && visible.has(c.from)));
+  const showHub = hub && (visible.has(hub.id) || (workers.length && wired));
+  if (showHub) visible.add(hub.id);
+  if (hub) pos[hub.id] = [0, 0];
+  const conn = id => hub && (d.connections||[]).find(c=>!c.note && ((c.from===hub.id && c.to===id) || (c.to===hub.id && c.from===id)));
+  const nOf = id => { const c = conn(id); return c ? strands(c.id) : 0; };
+  const [hw,hh] = size(hub||{kind:"x"}), slot = {}, by = {N:[],S:[],E:[],W:[],X:[],T:[]};
+  for (const a of workers.sort((p,q)=>p.name.localeCompare(q.name))) by[liveSlot(a)].push(a);
+  for (const k of ["N","S","E","W"]) by.X.push(...by[k].splice(1));   // one module per compass point
+  for (const k in by) for (const a of by[k]) slot[a.id] = k;
+  // team grid: one column per team (duplicates of a stage open a sub-column), rows by stage
+  const teams = {};
+  for (const a of by.T){ const t = teams[a.floor] ||= [], r = LIVE_ROW[a.slot]; let k = 0; while (t[k] && t[k][r]) k++; (t[k] ||= {})[r] = a; }
+  const cols = Object.keys(teams).sort((p,q)=>floorOrder(p)-floorOrder(q)||p.localeCompare(q)).flatMap(f=>teams[f]);
+  // bus band between the top row and the hub row: one lane per wired team module, exits on the hub top
+  const busIds = by.T.filter(a=>conn(a.id)).map(a=>a.id), exitRoom = hw - 28 - 26;
+  const busW = narrow => busIds.reduce((s,id)=>s+(narrow?0:bundleW(nOf(id)))+LANE, 0);
+  const narrow = busW(false) > exitRoom, band = busW(narrow) + 16;
+  const midHalf = PH/2, busTop = -midHalf - LIVE_ABOVE - band;
+  const yT = busTop - LIVE_BELOW - PH/2, yB = midHalf + LIVE_BELOW + LIVE_ABOVE + PH/2;
+  const put = (a, x, y) => { pos[a.id] = [x, y]; };
+  if (by.N[0]) put(by.N[0], -hw/2 + size(by.N[0])[0]/2, yT);
+  if (by.S[0]) put(by.S[0], 0, yB);
+  // left column: Lumen on the hub row, other terminals and notes alternating below / above it
+  const stack = [...by.X.map(a=>({a, w:size(a)[0], h:size(a)[1], n:nOf(a.id)})), ...liveNotes.map(n=>({note:n, w:NW, h:NH, n:1}))];
+  const colW = Math.max(by.W[0] ? size(by.W[0])[0] : 0, ...stack.map(it=>it.w), 0);
+  const corr = side => side.filter(it=>it.n).reduce((s,it)=>s+bundleW(it.n)+LANE+4, 0);
+  const below = stack.filter((_,k)=>k%2===0), above = stack.filter((_,k)=>k%2===1);
+  const mc = Math.max(corr(below), corr(above)), wx = -hw/2 - (mc ? 60 : 72) - mc - colW/2;
+  if (by.W[0]) put(by.W[0], wx, 0);
+  const wHalf = CH/2;
+  let down = wHalf + LIVE_BELOW, up = -wHalf - LIVE_ABOVE;
+  for (const it of below){ const y = down + (it.note ? 22 : LIVE_ABOVE) + it.h/2; down = y + it.h/2 + (it.note ? 0 : LIVE_BELOW);
+    if (it.a) put(it.a, wx, y); else notePos[it.note.id] = [wx, y]; }
+  for (const it of above){ const y = up - (it.note ? 22 : LIVE_BELOW) - it.h/2; up = y - it.h/2 - (it.note ? 0 : LIVE_ABOVE);
+    if (it.a) put(it.a, wx, y); else notePos[it.note.id] = [wx, y]; }
+  let left = hw/2;
+  if (by.E[0]){ const [w] = size(by.E[0]); put(by.E[0], left + GAP_E + w/2, 0); left += GAP_E + w; }
+  const rowY = {"-1":yT, "0":0, "1":yB};
+  for (const cell of cols){
+    const ids = Object.values(cell), sideCorr = sgn => ids.filter(a=>conn(a.id) && Math.sign(LIVE_ROW[a.slot] || 1)===sgn)
+      .reduce((s,a)=>s+(narrow?0:bundleW(nOf(a.id)))+LANE+10, 0);
+    const cx = left + 22 + Math.max(sideCorr(-1), sideCorr(1)) + PW/2; left = cx + PW/2;
+    for (const r in cell) put(cell[r], cx, rowY[r]);
+  }
+  layout = {rows:[], stages:[], pos, notePos, width:0, visible, notes:new Set(liveNotes.map(n=>n.id)), hub,
+    tree:{slot, narrow, busTop}};
+}
+const LIVE_ROW = {analise:-1, implementacao:0, revisao:1};
+const GAP_E = 96;   // room between the hub and the Concierge for the cable and its plugs
+function liveSlot(a){
+  if (isChief(a)) return "hub";
+  if (a.slot==="consultor" || /lumen|hermes/i.test(a.name)) return "W";
+  if (a.slot==="vigia") return "N";
+  if (a.slot==="integracao") return "S";
+  if (a.slot==="triagem") return "E";
+  return a.slot in LIVE_ROW ? "T" : "X";
+}
+
+function syncScene(d){
+  const now = performance.now(), wall = Date.now();
+  for (const a of d.agents){
+    let v = vis.get(a.id);
+    const before = prev.get(a.id);
+    if (v && before && before.state !== a.state){
+      v.flash = 1; v.flashColor = STATE_COLOR[a.state] || C.red; v.glitch = now;
+      if (a.state==="working") v.boot = now;
+      if (before.state==="working") v.keep = now + LINGER;
+    }
+  }
+  computeLayout(d, now);
+  for (const a of d.agents){
+    const p = layout.pos[a.id];
+    let v = vis.get(a.id);
+    if (!v){ v = {x:p?p[0]:0, y:p?p[1]+40:0, alpha:0, flash:0, boot:now, glitch:0, keep:0}; v.tx = v.x; v.ty = v.y; vis.set(a.id, v); }
+    if (p){ v.tx = p[0]; v.ty = p[1]; }
+    v.shown = layout.visible.has(a.id);
+    const h = history.get(a.id) || [], last = h[h.length-1];
+    if (!last || last.state !== a.state || last.attention !== a.attention){ if (last) last.to = wall; h.push({state:a.state, attention:a.attention, from:wall, to:null}); }
+    while (h.length > 200) h.shift();
+    history.set(a.id, h);
+    const active = new Set(a.state==="working" ? (a.tools||[]) : []);
+    for (const name of active){
+      const key = a.id+"|"+name;
+      if (!tools.has(key)){
+        const used = [...tools.values()].filter(t=>t.agent===a.id).map(t=>t.slot);
+        let slot = 0; while (used.includes(slot)) slot++;
+        tools.set(key, {agent:a.id, name, born:now, gone:0, slot});
+        toolTicks.push({agent:a.id, at:wall, name});
+      }
+    }
+    for (const t of tools.values()) if (t.agent===a.id && !t.gone && !active.has(t.name)) t.gone = now;
+  }
+  for (const n of d.notes||[]){ const p = layout.notePos[n.id]; let v = noteVis.get(n.id);
+    if (!v){ v = {x:p?p[0]:0, y:p?p[1]:0, alpha:0}; v.tx = v.x; v.ty = v.y; noteVis.set(n.id, v); } if (p){ v.tx=p[0]; v.ty=p[1]; } v.shown = layout.notes.has(n.id); }
+  for (const id of [...vis.keys()]) if (!d.agents.some(a=>a.id===id)) vis.delete(id);
+  if (scene.mode==="agent" && !layout.visible.has(scene.target)) goOverview(true);
+  while (toolTicks.length > 400) toolTicks.shift();
+  prev = new Map(d.agents.map(a=>[a.id,{state:a.state}]));
+  renderRoster(d);
+  // Re-frame automatically when who is on stage changes, unless the user is steering the camera.
+  const key = mode+"|"+[...layout.visible].sort().join(",");
+  if (!fitted){ camera = overviewCamera(); fitted = true; autoKey = key; }
+  else if (key !== autoKey){ autoKey = key;
+    if (scene.mode==="overview" && performance.now()-lastManual > 8000){
+      const n = [...layout.visible].filter(id=>{const a=agentById(id);return a && a.state==="working"}).length;
+      flyTo(overviewCamera(), mode==="live" ? (n ? `ATIVIDADE // ${n} EM EXECUÇÃO` : "SEM EXECUÇÃO AGORA") : "CONSOLE COMPLETO",
+        mode==="live" ? liveSummary() : `${d.agents.length} terminais no canvas`);
+    }
+  }
+}
+function liveSummary(){
+  const w = data.agents.filter(a=>a.state==="working");
+  return w.map(a=>`${a.name}${a.task?" · "+a.task.slice(0,18):""}`).join("  |  ").slice(0,90) || "aguardando turnos";
+}
+
+/* ================= camera & scenes ================= */
+const canvas = $("graph"), ctx = canvas.getContext("2d");
+function view(b, pad=.94, zmax=2.2){
+  const r = canvas.getBoundingClientRect();
+  return {x:(b.x0+b.x1)/2, y:(b.y0+b.y1)/2, z:Math.max(.3, Math.min(zmax, Math.min(r.width/(b.x1-b.x0), r.height/(b.y1-b.y0))*pad))};
+}
+function overviewCamera(){
+  if (mode==="all"){
+    const last = layout.rows.length ? layout.rows[layout.rows.length-1].y : 0;
+    const right = Math.max(layout.width+COLW/2, ...Object.values(layout.notePos).map(p=>p[0]+NW/2+10));
+    let x0 = -COLW/2-176, y0 = HEAD_Y-44, y1 = Math.max(last+PH/2+70, (layout.ctrl ? layout.ctrl.bottom+40 : 0), ...Object.values(layout.notePos).map(p=>p[1]+NH/2+12));
+    if (layout.ctrl) x0 = Math.min(x0, layout.ctrl.x-(CW+36)/2-16-layout.ctrl.n*(LANE+4));
+    for (const b of hubPlan().values()) for (const s of b.strands) for (const [px,py] of s){ y0 = Math.min(y0, py-14); x0 = Math.min(x0, px-14); }
+    return view({x0, y0, x1:right, y1}, .97);
+  }
+  const pts = [...layout.visible].map(id=>{const a=agentById(id), p=layout.pos[id]; return a&&p?[p,size(a),a.state==="working"||[...tools.values()].some(t=>t.agent===id&&!t.gone)]:null}).filter(Boolean);
+  for (const id of layout.notes) pts.push([layout.notePos[id],[NW,NH]]);
+  if (!pts.length) return {x:0, y:0, z:1};
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  // fit only what is on stage (plus labels above and tool chips below) so modules render as large as possible
+  for (const [[x,y],[w,h],busy] of pts){ x0=Math.min(x0,x-w/2-12); x1=Math.max(x1,x+w/2+12); y0=Math.min(y0,y-h/2-26); y1=Math.max(y1,y+h/2+(busy?74:14)); }
+  y0 -= 26;   // room for the scene buttons bar at the top of the stage
+  const minW = 380; if (x1-x0 < minW){ const c=(x0+x1)/2; x0=c-minW/2; x1=c+minW/2; }
+  return view({x0,y0,x1,y1}, .99, 3.2);
+}
+function flyTo(target, label, sub){
+  if (REDUCE){ camera = target; return; }
+  tween = {from:{...camera}, to:target, t0:performance.now(), dur:900, label, sub};
+}
+function setScene(m, target, label){
+  scene = {mode:m, target, since:performance.now()};
+  const a = agentById(target);
+  $("crumb").textContent = m==="overview" ? (mode==="live" ? "AO VIVO" : "CONSOLE") : m==="team" ? `CONSOLE ▸ ${label}` : `${mode==="live"?"AO VIVO":"CONSOLE"} ▸ ${teamName(a&&a.floor)} ▸ ${(a&&a.name||"").toUpperCase()}`;
+  $("back").hidden = m==="overview"; $("dataBtn").hidden = m!=="agent";
+  selected = m==="agent" ? target : null;
+}
+function goOverview(quiet){ setScene("overview"); flyTo(overviewCamera(), quiet ? "AGENTE SAIU DE CENA" : mode==="live" ? "AO VIVO" : "VISÃO GERAL", mode==="live" ? liveSummary() : ""); }
+function focusAgent(id){
+  const v = vis.get(id), a = agentById(id); if (!v||!a) return;
+  setScene("agent", id);
+  const [w,h] = size(a);
+  const tl = (a.lastTools||[]).length, sub = `${STATE[a.state]||a.state} · ${teamName(a.floor)} · ${STAGE_LABEL[a.slot]||a.slot}${tl?` · ${tl} ferramenta(s)`:""}`;
+  flyTo(view({x0:v.tx-w/2-40, y0:v.ty-h/2-70, x1:v.tx+w/2+400, y1:v.ty+h/2+170}, .9), `ACESSANDO // ${a.name.toUpperCase()}`, sub);
+}
+function focusTeam(row){
+  setScene("team", row.name, teamName(row.name));
+  const r = row.run;
+  flyTo(view({x0:-COLW/2-170, y0:row.y-PH/2-60, x1:layout.width+COLW/2, y1:row.y+PH/2+120}), `SETOR // ${row.name.toUpperCase()}`,
+    r ? `último run: ${r.card} · ${RUN_STATUS[r.status]||r.status}` : (row.info.status||"sem status no Maestri"));
+}
+function setMode(m){
+  if (mode===m) return; mode = m;
+  $("modeLive").classList.toggle("on", m==="live"); $("modeAll").classList.toggle("on", m==="all");
+  $("modeLive").setAttribute("aria-pressed", m==="live"); $("modeAll").setAttribute("aria-pressed", m==="all");
+  lastManual = 0; setScene("overview");
+  if (data) syncScene(data);
+}
+$("modeLive").onclick = ()=>setMode("live");
+$("modeAll").onclick = ()=>setMode("all");
+function stepCamera(now){
+  if (!tween) return 0;
+  const t = Math.min(1, (now-tween.t0)/tween.dur), k = ease(t), f = tween.from, to = tween.to;
+  const lift = Math.sin(Math.PI*t) * Math.min(.35, Math.hypot(to.x-f.x, to.y-f.y)/2500 + Math.abs(to.z-f.z)*.15);
+  camera = {x:f.x+(to.x-f.x)*k, y:f.y+(to.y-f.y)*k, z:(f.z+(to.z-f.z)*k)*(1-lift)};
+  if (t>=1) tween = null;
+  return t;
+}
+function toWorld(px,py){const r=canvas.getBoundingClientRect();return [(px-r.left-r.width/2)/camera.z+camera.x,(py-r.top-r.height/2)/camera.z+camera.y]}
+let drag = null;
+canvas.addEventListener("pointerdown", e=>{drag={x:e.clientX,y:e.clientY,cx:camera.x,cy:camera.y,moved:false};canvas.setPointerCapture(e.pointerId)});
+canvas.addEventListener("pointermove", e=>{
+  if (drag){const dx=e.clientX-drag.x, dy=e.clientY-drag.y; if(Math.abs(dx)+Math.abs(dy)>4){drag.moved=true;canvas.classList.add("drag");tween=null;lastManual=performance.now()}
+    if (drag.moved){camera.x=drag.cx-dx/camera.z; camera.y=drag.cy-dy/camera.z;} return;}
+  canvas.style.cursor = hit(...toWorld(e.clientX,e.clientY)) ? "pointer" : "";
+});
+canvas.addEventListener("pointerup", e=>{
+  canvas.classList.remove("drag");
+  if (drag && !drag.moved){
+    const h = hit(...toWorld(e.clientX,e.clientY));
+    if (h && h.agent) focusAgent(h.agent); else if (h && h.row) focusTeam(h.row);
+  }
+  drag = null;
+});
+canvas.addEventListener("wheel", e=>{e.preventDefault(); tween=null; lastManual=performance.now();
+  const [wx,wy] = toWorld(e.clientX,e.clientY), z = Math.max(.3, Math.min(3, camera.z*Math.exp(-e.deltaY*0.0015)));
+  const r = canvas.getBoundingClientRect();
+  camera.z = z; camera.x = wx-(e.clientX-r.left-r.width/2)/z; camera.y = wy-(e.clientY-r.top-r.height/2)/z;
+},{passive:false});
+canvas.addEventListener("dblclick", ()=>{lastManual=0;goOverview()});
+$("back").onclick = ()=>{lastManual=0;goOverview()};
+$("dataBtn").onclick = ()=>scene.target && openDrawer(scene.target);
+function cycle(dir){
+  const list = [...layout.visible].map(agentById).filter(Boolean).sort((a,b)=>(layout.pos[a.id][1]-layout.pos[b.id][1])||(layout.pos[a.id][0]-layout.pos[b.id][0]));
+  if (!list.length) return;
+  const i = list.findIndex(a=>a.id===scene.target);
+  focusAgent(list[(i+dir+list.length)%list.length].id);
+}
+canvas.addEventListener("keydown", e=>{
+  if (e.key==="ArrowRight"){e.preventDefault();cycle(1)} else if (e.key==="ArrowLeft"){e.preventDefault();cycle(-1)}
+  else if (e.key==="Enter" && scene.mode==="agent") openDrawer(scene.target);
+});
+function toolPos(t, a){ const v = vis.get(t.agent), [w,h] = size(a); return [v.x - w/2 + 38, v.y + h/2 + 22 + t.slot*25]; }
+function hit(wx,wy){
+  if (!data) return null;
+  for (const a of data.agents){ const v = vis.get(a.id); if (!v || !v.shown || v.alpha < .5) continue; const [w,h] = size(a);
+    if (Math.abs(wx-v.x) < w/2+4 && Math.abs(wy-v.y) < h/2+4) return {agent:a.id}; }
+  for (const t of tools.values()){ const a = agentById(t.agent), v = vis.get(t.agent); if (!a || !v || !v.shown) continue; const p = toolPos(t,a);
+    if (wx>p[0] && wx<p[0]+156 && Math.abs(wy-p[1])<11) return {agent:t.agent}; }
+  for (const row of layout.rows) if (wx > -COLW/2-184 && wx < -COLW/2-14 && Math.abs(wy-row.y) < 44) return {row};
+  return null;
+}
+
+/* ================= circuits ================= */
+function route(a,b,c=14){
+  const [x0,y0]=a, [x1,y1]=b;
+  if (Math.abs(y1-y0)<2){ const m=(x0+x1)/2, k=Math.min(8, Math.abs(x1-x0)/6), d=Math.sign(x1-x0)||1;   // never straight: a 45° bump
+    return [a,[m-2*k*d,y0],[m-k*d,y0-k],[m+k*d,y0-k],[m+2*k*d,y0],b]; }
+  const mx=(x0+x1)/2, s=Math.sign(y1-y0), k=Math.min(c, Math.abs(y1-y0)/2, Math.abs(x1-x0)/4);
+  return [a,[mx-k,y0],[mx,y0+s*k],[mx,y1-s*k],[mx+k,y1],b];
+}
+function busRoute(a,b,y){
+  const [x0,y0]=a, [x1,y1]=b, k=12, sx=Math.sign(x1-x0)||1;
+  if (Math.abs(x1-x0) < 2*k) return [a,[x0,y],[x1,y],b];
+  return [a,[x0,y-Math.sign(y-y0)*k],[x0+sx*k,y],[x1-sx*k,y],[x1,y+Math.sign(y1-y)*k],b];
+}
+function lengths(pts){const L=[0];for(let i=1;i<pts.length;i++)L.push(L[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]));return L}
+function along(pts,t){const L=lengths(pts),d=L[L.length-1]*t;let i=1;while(i<L.length-1&&L[i]<d)i++;
+  const seg=(d-L[i-1])/((L[i]-L[i-1])||1);return [pts[i-1][0]+(pts[i][0]-pts[i-1][0])*seg, pts[i-1][1]+(pts[i][1]-pts[i-1][1])*seg]}
+function suffix(pts,t){ return prefix([...pts].reverse(), 1-t).reverse(); }
+function prefix(pts,t){
+  if (t>=1) return pts;
+  const L = lengths(pts), d = L[L.length-1]*t, out = [pts[0]];
+  for (let i=1;i<pts.length;i++){ if (L[i] <= d){ out.push(pts[i]); continue; } out.push(along(pts,t)); break; }
+  return out;
+}
+function polyline(pts,color,width,alpha,dash){
+  ctx.save(); ctx.globalAlpha=alpha; ctx.strokeStyle=color; ctx.lineWidth=width; if(dash)ctx.setLineDash(dash);
+  ctx.beginPath(); pts.forEach((p,i)=>ctx[i?"lineTo":"moveTo"](...p)); ctx.stroke(); ctx.restore();
+}
+function pads(pts,color,alpha=1){ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle=color;for(const p of pts){ctx.beginPath();ctx.arc(p[0],p[1],3,0,7);ctx.fill()}ctx.restore()}
+function pulse(pts,t,color,len=.05){
+  const a=along(pts,Math.max(0,t-len)), b=along(pts,t);
+  ctx.save(); ctx.strokeStyle=color; ctx.lineWidth=3.2; ctx.shadowColor=color; ctx.shadowBlur=12; ctx.lineCap="round";
+  ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke(); ctx.restore();
+}
+function pulses(pts,color,time,speed=.45,n=2){ if (REDUCE) return; for(let k=0;k<n;k++) pulse(pts,((time*speed)+k/n)%1,color); }
+const ignition = new Map(); let seenLinks = new Set();
+// An active Maestri connection is traced from its source until it reaches the target, then carries pulses.
+/* ================= drawing ================= */
+function chamfer(x,y,w,h,c=12){ctx.beginPath();ctx.moveTo(x+c,y);ctx.lineTo(x+w,y);ctx.lineTo(x+w,y+h-c);ctx.lineTo(x+w-c,y+h);ctx.lineTo(x,y+h);ctx.lineTo(x,y+c);ctx.closePath()}
+function brackets(x,y,w,h,color,gap=5,len=10){
+  ctx.strokeStyle=color; ctx.lineWidth=1.4; ctx.beginPath();
+  for (const [cx,cy,sx,sy] of [[x-gap,y-gap,1,1],[x+w+gap,y-gap,-1,1],[x-gap,y+h+gap,1,-1],[x+w+gap,y+h+gap,-1,-1]]){
+    ctx.moveTo(cx+sx*len,cy); ctx.lineTo(cx,cy); ctx.lineTo(cx,cy+sy*len); }
+  ctx.stroke();
+}
+function drawGrid(w,h){
+  const step=40*camera.z; if (step<8) return;
+  const ox=((-camera.x*camera.z+w/2)%step+step)%step, oy=((-camera.y*camera.z+h/2)%step+step)%step;
+  ctx.strokeStyle=rgba(C.cyan,.045); ctx.lineWidth=1; ctx.beginPath();
+  for(let x=ox;x<w;x+=step){ctx.moveTo(x,0);ctx.lineTo(x,h)} for(let y=oy;y<h;y+=step){ctx.moveTo(0,y);ctx.lineTo(w,y)} ctx.stroke();
+}
+function dimFor(a){
+  if (scene.mode==="agent") return a.id===scene.target ? 1 : .18;
+  if (scene.mode==="team") return a.floor===scene.target && a.kind==="stage" ? 1 : .25;
+  return 1;
+}
+function drawLabels(){
+  if (mode!=="all") return;
+  ctx.textBaseline="middle";
+  for (const st of layout.stages){
+    const x=st.x-COLW/2+24, w=COLW-48;
+    const here = data.agents.filter(a=>a.kind==="stage" && a.slot===st.id), exec = here.filter(a=>a.state==="working").length;
+    ctx.fillStyle=rgba(exec?C.cyan:C.red,.14); ctx.beginPath(); ctx.moveTo(x+12,HEAD_Y-18); ctx.lineTo(x+w-12,HEAD_Y-18); ctx.lineTo(x+w,HEAD_Y-4); ctx.lineTo(x+w-12,HEAD_Y+10); ctx.lineTo(x+12,HEAD_Y+10); ctx.lineTo(x,HEAD_Y-4); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle=exec?C.cyan:C.red; ctx.lineWidth=1; ctx.stroke();
+    ctx.textAlign="center"; ctx.font=HEADF(18); ctx.fillStyle=C.text; ctx.fillText(st.label.toUpperCase(), st.x, HEAD_Y-3);
+    ctx.font=MONO(10); ctx.fillStyle=exec?C.cyan:C.muted; ctx.fillText(`${exec}/${here.length} em execução`, st.x, HEAD_Y-30);
+    const n=(data.shelves||{})[STAGE_SHELF[st.id]];
+    if (n!=null){ ctx.fillStyle=C.muted; ctx.fillText(`Trello: ${n} card(s)`, st.x, HEAD_Y+24); }
+  }
+  for (const row of layout.rows){
+    const x=-COLW/2-170, w=154, active = scene.mode!=="team" || scene.target===row.name;
+    ctx.save(); ctx.globalAlpha = active ? 1 : .3; ctx.textAlign="left";
+    chamfer(x,row.y-44,w,88,10); ctx.fillStyle=rgba(row.color,.07); ctx.fill(); ctx.strokeStyle=rgba(row.color,.7); ctx.lineWidth=1.2; ctx.stroke();
+    ctx.fillStyle=row.color; ctx.fillRect(x,row.y-44,4,88);
+    ctx.font=HEADF(17); ctx.fillStyle=row.color; ctx.fillText(teamName(row.name), x+12, row.y-30);
+    ctx.font=MONO(9.5); ctx.fillStyle=C.muted; ctx.fillText(fit(ctx,row.info.status||"sem status no Maestri",w-20), x+12, row.y-13);
+    const r = row.run;
+    if (r){
+      ctx.fillStyle=r.open?C.cyan:C.text; ctx.fillText(fit(ctx,`run: ${r.card}`,w-20), x+12, row.y+3);
+      ctx.fillStyle=r.open?C.cyan:r.status==="failed"?C.fail:C.green; ctx.fillText(fit(ctx,`${RUN_STATUS[r.status]||r.status}${r.pr?" · PR":""} · ${ago(Date.parse(r.updatedAt))}`,w-20), x+12, row.y+17);
+      const docs = r.stages.map(s=>`${s.role==="implementation"?"impl":s.role==="review"?"rev":s.role.slice(0,4)}:${s.outcome}`).join(" ");
+      ctx.fillStyle=C.muted; ctx.fillText(fit(ctx,docs||"sem documentos confirmados",w-20), x+12, row.y+31);
+    } else if (row.info.progress!=null){
+      for (let i=0;i<10;i++){ ctx.fillStyle = i < Math.round(row.info.progress*10) ? row.color : rgba(row.color,.15); ctx.fillRect(x+12+i*11, row.y+10, 9, 6); }
+      ctx.fillStyle=C.muted; ctx.fillText(`progresso do floor ${Math.round(row.info.progress*100)}%`, x+12, row.y+26);
+    } else { ctx.fillStyle=C.muted; ctx.fillText("sem run registrado", x+12, row.y+10); }
+    ctx.restore();
+  }
+  if (layout.ctrl){ ctx.textAlign="center"; ctx.font=MONO(); ctx.fillStyle=C.red; ctx.fillText("CONTROLE // SEM ETAPA SDD", layout.ctrl.x, layout.ctrl.bottom+24); }
+}
+function edgePoint(a, side){
+  const v=vis.get(a.id), [w,h]=size(a);
+  return side==="r"?[v.x+w/2,v.y]:side==="l"?[v.x-w/2,v.y]:side==="t"?[v.x,v.y-h/2]:[v.x,v.y+h/2];
+}
+/* ---- PCB-style routing: every Maestri connection gets its own exit pad, bus lane and corridor ---- */
+const LANE = 6, K = 6, STRAND = 4;
+const strands = id => 1 + hash(id) % 4;   // 1–4 parallel strands, fixed per Maestri connection
+const bundleW = n => (n-1)*STRAND;
+// The bundle is born at the source: n strands run in parallel along the whole path (miter offset of
+// the 90°/45° centre line), so they never cross each other and land side by side on the target.
+function offsetPath(pts, d){
+  const p = pts.filter((q,i)=>!i || q[0]!==pts[i-1][0] || q[1]!==pts[i-1][1]);
+  const nrm = (a,b)=>{ const dx=b[0]-a[0], dy=b[1]-a[1], l=Math.hypot(dx,dy)||1; return [-dy/l, dx/l]; };
+  return p.map((q,i)=>{
+    if (!d) return q;
+    if (i===0){ const n = nrm(q,p[1]); return [q[0]+n[0]*d, q[1]+n[1]*d]; }
+    if (i===p.length-1){ const n = nrm(p[i-1],q); return [q[0]+n[0]*d, q[1]+n[1]*d]; }
+    const n1 = nrm(p[i-1],q), n2 = nrm(q,p[i+1]), m = [n1[0]+n2[0], n1[1]+n2[1]], ml = Math.hypot(...m)||1, u = [m[0]/ml, m[1]/ml];
+    const k = d / Math.max(.5, u[0]*n1[0]+u[1]*n1[1]); return [q[0]+u[0]*k, q[1]+u[1]*k];
+  });
+}
+const bundleOf = (pts, n=1) => ({center:pts, strands: Array.from({length:n}, (_,j)=>offsetPath(pts, (j-(n-1)/2)*STRAND))});
+// Lane assignment per side of the hub (outer exit → top lane):
+//  - control targets (pad on their bottom edge) first, nearest outermost, so their rising leg crosses nothing;
+//  - then stage targets, farthest first, so a lane never passes over another trace's vertical leg.
+// Spacing reserves each bundle's width; if a side has no room, its bundles fall back to one strand.
+// Wide layout (TODOS): the hub heads a control column on the left. Every route to a stage module or note
+// rises from the hub's top edge to a bus band above the stage headers, runs right and drops down its own
+// corridor. Nearest destination = rightmost exit + lowest lane, so risers, lanes and corridors never cross.
+// Control terminals below the hub are reached by risers on the column's left flank (deeper = further left).
+const LANE_BASE = () => HEAD_Y - 52;
+function hubPlanLeft(hub, hv){
+  const plan = new Map(), [hw,hh] = size(hub), top = hv.y-hh/2, left = hv.x-hw/2;
+  const obstacles = [...data.agents.filter(a=>a.id!==hub.id && vis.get(a.id) && vis.get(a.id).shown).map(a=>{ const v=vis.get(a.id), [w,h]=size(a); return {id:a.id, x0:v.x-w/2, x1:v.x+w/2, y0:v.y-h/2, y1:v.y+h/2}; }),
+    ...(data.notes||[]).filter(n=>noteVis.get(n.id) && noteVis.get(n.id).shown).map(n=>{ const v=noteVis.get(n.id); return {id:n.id, x0:v.x-NW/2, x1:v.x+NW/2, y0:v.y-NH/2, y1:v.y+NH/2}; })];
+  const items = [], ctrl = [];
+  for (const c of data.connections||[]){
+    if (c.from!==hub.id && c.to!==hub.id) continue;
+    if (c.note){ const nv = noteVis.get(c.note); if (nv && nv.shown) items.push({c, note:c.note, n:1}); continue; }
+    const other = agentById(c.from===hub.id ? c.to : c.from), v = other && vis.get(other.id);
+    if (!v || !v.shown) continue;
+    if (Math.abs(v.tx - hv.tx) < 30) ctrl.push({c, a:other}); else items.push({c, a:other, n:strands(c.id)});
+  }
+  if (items.reduce((s,it)=>s+bundleW(it.n)+LANE,0) > hw-28) items.forEach(it=>it.n=1);
+  const base = LANE_BASE(), used = [], ty = it => it.note ? noteVis.get(it.note).y : vis.get(it.a.id).y;
+  for (const it of [...items].sort((p,q)=>ty(p)-ty(q))){
+    let x, y1, half = bundleW(it.n)/2, self = it.note || it.a.id, m0 = it.note ? 12 : 14;
+    if (it.note){ const nv = noteVis.get(it.note); x = nv.x-NW/2-14; y1 = nv.y; }
+    else { const v = vis.get(it.a.id), [w,h] = size(it.a); x = v.x-w/2-16-half; y1 = v.y-h/2-16; }
+    for (let k=0, moved=true; moved && k<80; k++){
+      moved = false;
+      for (const r of obstacles){ if (r.id===self) continue; const m = m0+half;
+        if (r.y1+4 > base && r.y0-4 < y1 && x > r.x0-m && x < r.x1+m){ x = r.x0-m-1; moved = true; } }
+      for (const u of used){ const gap = u.half+half+LANE+4;
+        if (u.y1 > base && base < y1 && Math.abs(x-u.x) < gap && Math.min(u.y1,y1) > base){ x = u.x-gap; moved = true; } }
+    }
+    used.push({x, y1, half}); it.dest = x;
+  }
+  let cum = 0;
+  [...items].sort((p,q)=>p.dest-q.dest).forEach(it=>{
+    const half = bundleW(it.n)/2, off = cum + half; cum += bundleW(it.n) + LANE;
+    const exit = hv.x + hw/2 - 14 - off, lane = base - off, x = it.dest;
+    const pts = [[exit,top],[exit,lane+K],[exit+K,lane],[x-K,lane],[x,lane+K]];
+    if (it.note){ const nv = noteVis.get(it.note); pts.push([x,nv.y-K],[x+K,nv.y],[nv.x-NW/2,nv.y]); }
+    else { const v = vis.get(it.a.id), [w,h] = size(it.a), tt = v.y-h/2, ly = tt-16, tx = v.x+w/2-40;
+      pts.push([x,ly-K],[x+K,ly],[tx-K,ly],[tx,ly+K],[tx,tt]); }
+    plan.set(it.c.id, bundleOf(pts, it.n));
+  });
+  ctrl.sort((p,q)=>vis.get(p.a.id).y-vis.get(q.a.id).y).forEach((it,k)=>{
+    const v = vis.get(it.a.id), [w] = size(it.a), y = hv.y+hh/2-12-k*LANE, x = left-14-k*(LANE+4);
+    plan.set(it.c.id, bundleOf([[left,y],[x+K,y],[x,y+K],[x,v.y-K],[x+K,v.y],[v.x-w/2,v.y]]));
+  });
+  return plan;
+}
+function hubPlan(){
+  const plan = new Map(), hub = layout.hub, hv = hub && vis.get(hub.id);
+  if (!hv || !hv.shown) return plan;
+  if (mode==="all") return hubPlanLeft(hub, hv);
+  return hubPlanTree(hub, hv);
+}
+// Live tree routing. Column-1 targets: rise/drop from the hub's top/bottom edge and enter the target's
+// left side (farther target = outer exit, so risers never cross). Stage targets: leave the hub's right
+// edge on a channel lane, turn into a corridor in the gap before their column and enter the left side.
+// Lanes that turn earlier sit outermost and farther targets take outer corridors: no crossings.
+function hubPlanTree(hub, hv){
+  const plan = new Map(), T = layout.tree; if (!T) return plan;
+  const [hw,hh] = size(hub), top = hv.y-hh/2, bottom = hv.y+hh/2, left = hv.x-hw/2, right = hv.x+hw/2;
+  const items = [];
+  for (const c of data.connections||[]){
+    if (c.from!==hub.id && c.to!==hub.id) continue;
+    if (c.note){ const v = noteVis.get(c.note); if (v && v.shown) items.push({c, v, w:NW, h:NH, n:1, slot:"X"}); continue; }
+    const o = agentById(c.from===hub.id ? c.to : c.from), v = o && vis.get(o.id);
+    if (v && v.shown) items.push({c, v, w:size(o)[0], h:size(o)[1], n:strands(c.id), slot:T.slot[o.id]||"X"});
+  }
+  const dy = it => it.v.y - hv.y, nx = left + 20;
+  // compass points: never a straight run, always a 45° jog (sideways by `side`) just before the target
+  const jog = (a, b, side, id) => { const vert = a[0]===b[0], dir = Math.sign(vert ? b[1]-a[1] : b[0]-a[0]), d = JOG, r = srand("jog|"+id);
+    const run = Math.abs(vert ? b[1]-a[1] : b[0]-a[0]), slack = Math.max(0, run - 2*d - 40);
+    // vertical: jog somewhere in the middle half of the run (clear of the header tab); horizontal: near the target
+    const j = vert ? (a[1]+b[1])/2 - dir*d/2 + dir*(r-.5)*slack*.5 : b[0] - dir*(10+d + r*Math.min(18, slack*.3));
+    return vert ? [a, [a[0], j], [a[0]+side*d, j+dir*d], [b[0]+side*d, b[1]]] : [a, [j, a[1]], [j+dir*d, a[1]+side*d], [b[0], b[1]+side*d]]; };
+  for (const it of items){ const {v,w,h} = it; let pts;
+    const cid = it.c.id;
+    if (it.slot==="N") pts = jog([nx, top], [nx, v.y+h/2], -1, cid);
+    else if (it.slot==="S") pts = jog([hv.x, bottom], [hv.x, v.y-h/2], srand("side|"+cid) < .5 ? 1 : -1, cid);
+    else if (it.slot==="W") pts = jog([left, hv.y], [v.x+w/2, hv.y], -1, cid);
+    else if (it.slot==="E") pts = jog([right, hv.y], [v.x-w/2, hv.y], srand("side|"+cid) < .5 ? 1 : -1, cid);
+    if (pts) plan.set(it.c.id, bundleOf(pts, it.n)); }
+  // left stack: lanes off the hub's left edge, then a corridor down/up to the module's right side.
+  // Deeper module = lane farther from the centre and innermost corridor, so nothing crosses.
+  for (const sgn of [-1, 1]){
+    const side = items.filter(it=>it.slot==="X" && Math.sign(dy(it))===sgn), room = hh/2 - 12;
+    if (side.reduce((s,it)=>s+bundleW(it.n)+LANE,0) > room) side.forEach(it=>it.n=1);
+    const total = side.reduce((s,it)=>s+bundleW(it.n)+LANE,0), k = Math.min(1, room/(total||1));
+    let cum = 0;
+    [...side].sort((p,q)=>Math.abs(dy(p))-Math.abs(dy(q))).forEach(it=>{ const half = bundleW(it.n)/2; it.ly = hv.y + sgn*(10 + (cum+half)*k); cum += bundleW(it.n)+LANE; });
+    cum = 0;
+    [...side].sort((p,q)=>Math.abs(dy(q))-Math.abs(dy(p))).forEach(it=>{ const half = bundleW(it.n)/2, x = left - 12 - cum - half; cum += bundleW(it.n)+LANE+4;
+      const ty = it.v.y, R = it.v.x + it.w/2;
+      plan.set(it.c.id, bundleOf([[left,it.ly],[x+K,it.ly],[x,it.ly+sgn*K],[x,ty-sgn*K],[x-K,ty],[R,ty]], it.n)); });
+  }
+  // team grid: risers from the hub top into the bus band, a lane right, then a corridor left of the column
+  const bus = items.filter(it=>it.slot==="T");
+  if (T.narrow) bus.forEach(it=>it.n=1);
+  const byCol = {};
+  for (const it of bus){ it.L = it.v.x - it.w/2; it.up = it.v.y < hv.y - 1; (byCol[Math.round(it.v.x)] ||= []).push(it); }
+  for (const col of Object.values(byCol)) for (const up of [true, false]){
+    let cum = 0;
+    col.filter(it=>it.up===up).sort((p,q)=>Math.abs(dy(p))-Math.abs(dy(q))).forEach(it=>{   // nearer = inner corridor
+      const half = bundleW(it.n)/2; it.x = it.L - 12 - cum - half; cum += bundleW(it.n) + LANE + 10; });
+  }
+  // lanes top→bottom: upward corridors near→far, then downward ones far→near; leftmost exit = top lane
+  const lanes = [...bus.filter(it=>it.up).sort((p,q)=>p.x-q.x), ...bus.filter(it=>!it.up).sort((p,q)=>q.x-p.x)];
+  const hasN = items.some(it=>it.slot==="N"), ex0 = hasN ? nx + 12 + LANE : left + 14;
+  let cum = 0;
+  for (const it of lanes){ const half = bundleW(it.n)/2, off = cum + half; cum += bundleW(it.n) + LANE;
+    const ex = ex0 + off, ly = T.busTop + 8 + off, ty = it.v.y, s = it.up ? -1 : 1;
+    plan.set(it.c.id, bundleOf([[ex,top],[ex,ly+K],[ex+K,ly],[it.x-K,ly],[it.x,ly+s*K],[it.x,ty-s*K],[it.x+K,ty],[it.L,ty]], it.n)); }
+  return plan;
+}
+
+// Each circuit that comes alive takes a free colour of its own (never red: red means failure);
+// its strands share it. The colour is released when the connection goes idle.
+const CIRCUIT = ["#2de2e6","#ff3ec8","#fcee0a","#4dffa6","#a46bff","#ff9f1c","#2f8cff","#c6ff3d","#ff7ad9","#5ef1c4","#ffd166","#7df9ff"];
+const circuitColor = new Map();
+function colorFor(key){
+  if (!circuitColor.has(key)){ const used = new Set(circuitColor.values());
+    const o = SESSION % CIRCUIT.length, pal = [...CIRCUIT.slice(o), ...CIRCUIT.slice(0, o)];
+    circuitColor.set(key, pal.find(c=>!used.has(c)) || CIRCUIT[shash(key)%CIRCUIT.length]); }
+  return circuitColor.get(key);
+}
+function spark(p,color,alpha){ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle="#fff";ctx.shadowColor=color;ctx.shadowBlur=16;ctx.beginPath();ctx.arc(p[0],p[1],3,0,7);ctx.fill();ctx.restore()}
+function ring(p,color,alpha,r=4){ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle="#05050c";ctx.strokeStyle=color;ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(p[0],p[1],r,0,7);ctx.fill();ctx.stroke();ctx.restore()}
+function lit(pts,color,alpha,width){ polyline(pts, color, width*3.5, .08*alpha); polyline(pts, color, width, .95*alpha); }
+const IDLE = "#3a4654";
+// An active connection is born unlit: the whole bundle appears dark, then energy runs from the source
+// along every strand at once until it reaches the target; then pulses keep flowing. One colour per circuit.
+function ignite(key, bundle, color, time, alpha=1){
+  seenLinks.add(key);
+  if (!ignition.has(key)) ignition.set(key, performance.now());
+  const lens = bundle.strands.map(s=>lengths(s).at(-1)), total = Math.max(...lens), n = bundle.strands.length;
+  const p = REDUCE ? 1 : Math.min(1, (performance.now()-ignition.get(key))/(320+total*1.8)), d = ease(p);
+  const wd = n>1 ? 1.4 : 1.9;
+  bundle.strands.forEach((s,i)=>{
+    polyline(s, IDLE, wd, .8*alpha); ring(s[0], IDLE, alpha, 2.5);
+    const sp = prefix(s, d); lit(sp, color, alpha, wd); ring(s[0], color, alpha, 2.5);
+    if (p<1) spark(sp[sp.length-1], color, alpha); else { ring(s[s.length-1], color, alpha, 3); pulses(s, color, time+i*.13, .5, 2); }
+  });
+}
+function idleTrace(bundle, alpha){
+  for (const s of bundle.strands){ polyline(s, IDLE, bundle.strands.length>1?1:1.3, .8*alpha); ring(s[0], IDLE, .8*alpha, 2.5); ring(s[s.length-1], IDLE, .8*alpha, 3); }
+}
+/* ---- Lumen uplink: the Orquestrador ↔ Lumen consultation gets its own plasma conduit ----
+   Signal (same as the Pixel Office): Lumen's runtime turn is working, or completed < 20 s ago, plus its mode.
+   TEACH = Lumen orients the Orquestrador (gold, Lumen → hub); LEARN = Lumen learns the confirmed fix
+   (violet, hub → Lumen). It follows the routed circuit, so it never crosses modules or other traces. */
+const UPLINK = {teach:"#ffd36b", learn:"#b36bff", none:"#7df9ff"};
+let arcSeed = 0, arcAt = 0;
+function lumenExchange(){
+  const l = data.agents.find(a=>/lumen|hermes/i.test(`${a.name} ${a.role}`)), hub = layout.hub;
+  if (!l || !hub) return null;
+  const mode = /learn/i.test(modeOf(l)) ? "learn" : /teach/i.test(modeOf(l)) ? "teach" : "none";
+  const running = l.state === "working", recent = l.state === "completed" && l.lastActiveAt && Date.now()-l.lastActiveAt < 20000;
+  return running || recent ? {lumen:l, hub, mode, running, color:UPLINK[mode]} : null;
+}
+function pointAt(pts, lens, d){
+  const total = lens.at(-1); d = Math.max(0, Math.min(total, d));
+  let i = 1; while (i < lens.length-1 && lens[i] < d) i++;
+  const a = pts[i-1], b = pts[i], seg = (lens[i]-lens[i-1]) || 1, t = (d-lens[i-1])/seg;
+  return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, (b[0]-a[0])/seg, (b[1]-a[1])/seg];
+}
+// Jagged lightning that hugs the conduit (perpendicular jitter, re-rolled ~16×/s), with short forks.
+function lightning(pts, lens, color, alpha, amp, rnd){
+  const total = lens.at(-1), step = 9, path = [];
+  for (let d=0; d<=total; d+=step){ const [x,y,dx,dy] = pointAt(pts,lens,d), j = (d===0||d+step>total) ? 0 : (rnd()-.5)*2*amp; path.push([x-dy*j, y+dx*j]); }
+  ctx.save(); ctx.globalAlpha = alpha; ctx.lineJoin = "miter";
+  for (const [w,c,a] of [[6,color,.18],[2.2,color,.9],[1,"#ffffff",.95]]){
+    ctx.globalAlpha = alpha*a; ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); path.forEach((p,i)=>i?ctx.lineTo(...p):ctx.moveTo(...p)); ctx.stroke(); }
+  for (let f=0; f<3; f++){ const k = 1+Math.floor(rnd()*(path.length-2)), p = path[k]; if (!p) continue;
+    ctx.globalAlpha = alpha*.7; ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(...p);
+    ctx.lineTo(p[0]+(rnd()-.5)*22, p[1]+(rnd()-.5)*22); ctx.lineTo(p[0]+(rnd()-.5)*30, p[1]+(rnd()-.5)*30); ctx.stroke(); }
+  ctx.restore();
+}
+function shock(p, color, time, alpha, phase=0){
+  for (let i=0;i<3;i++){ const k = ((time*.9+phase+i/3)%1); ctx.save(); ctx.globalAlpha = alpha*(1-k)*.8; ctx.strokeStyle = color; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(p[0], p[1], 4+k*26, 0, TAU); ctx.stroke(); ctx.restore(); }
+}
+function charge(p, color, time, alpha){   // rings collapsing into the emitter
+  for (let i=0;i<3;i++){ const k = 1-((time*1.1+i/3)%1); ctx.save(); ctx.globalAlpha = alpha*(1-k)*.7; ctx.strokeStyle = color; ctx.lineWidth = 1.2;
+    ctx.setLineDash([3,3]); ctx.beginPath(); ctx.arc(p[0], p[1], 4+k*20, 0, TAU); ctx.stroke(); ctx.restore(); }
+}
+// Two-strand helix that rides the conduit: the calm, flowing "oracle" beam of a TEACH consultation.
+function helix(pts, lens, color, alpha, time, dir){
+  const total = lens.at(-1);
+  for (const ph of [0, Math.PI]){
+    ctx.save(); ctx.globalAlpha = alpha; ctx.strokeStyle = color; ctx.lineWidth = 1.6; ctx.shadowColor = color; ctx.shadowBlur = 8; ctx.beginPath();
+    for (let d=0; d<=total; d+=4){ const [x,y,dx,dy] = pointAt(pts,lens,d), env = Math.min(1, d/24, (total-d)/24), o = 5.5*env*Math.sin(d/11 - dir*time*6 + ph);
+      const q = [x-dy*o, y+dx*o]; d ? ctx.lineTo(...q) : ctx.moveTo(...q); }
+    ctx.stroke(); ctx.restore();
+  }
+}
+function starBurst(p, color, time, alpha){   // insight absorbed by the Orquestrador
+  ctx.save(); ctx.translate(p[0], p[1]); ctx.rotate(time*.8); ctx.strokeStyle = color; ctx.lineWidth = 1.4;
+  for (let i=0;i<8;i++){ const k = .5+.5*Math.sin(time*5+i), r0 = 6, r1 = 12+10*k; ctx.globalAlpha = alpha*(.4+.6*k);
+    ctx.beginPath(); ctx.moveTo(Math.cos(i*TAU/8)*r0, Math.sin(i*TAU/8)*r0); ctx.lineTo(Math.cos(i*TAU/8)*r1, Math.sin(i*TAU/8)*r1); ctx.stroke(); }
+  ctx.restore();
+}
+function drawUplink(bundle, ex, time, alpha){
+  const pts = bundle.center, lens = lengths(pts), total = lens.at(-1), color = ex.color;
+  // strands always run hub → Lumen. TEACH: Lumen teaches the hub (flow back). LEARN: the hub teaches Lumen.
+  const teach = ex.mode === "teach", fwd = !teach;
+  const fade = ex.running ? 1 : Math.max(0, 1-(Date.now()-ex.lumen.lastActiveAt)/20000);
+  const a = alpha*fade, src = fwd ? pts[0] : pts.at(-1), dst = fwd ? pts.at(-1) : pts[0];
+  polyline(pts, color, 12, .06*a); polyline(pts, color, teach ? 3 : 5, .14*a); polyline(pts, color, 1.2, .85*a);
+  ring(pts[0], color, a, 3.5); ring(pts.at(-1), color, a, 3.5);
+  if (REDUCE){ uplinkLabel(pts, lens, ex, a); return; }
+  if (ex.running && teach){
+    // TEACH — oracle beam: golden helix, soft light motes drifting from Lumen to the hub, insight star at the hub
+    helix(pts, lens, color, a*.9, time, -1);
+    for (let i=0;i<7;i++){ const k = ((time*.28+i/7)%1), [x,y] = pointAt(pts,lens,(1-k)*total);
+      ctx.save(); ctx.globalAlpha = a*Math.sin(Math.PI*k); ctx.fillStyle = "#fff6d8"; ctx.shadowColor = color; ctx.shadowBlur = 16;
+      ctx.beginPath(); ctx.arc(x,y,2.6,0,TAU); ctx.fill(); ctx.restore(); }
+    starBurst(dst, color, time, a); shock(src, color, time*.6, a*.5);
+  } else if (ex.running){
+    // LEARN — data injection: jagged violet discharge from the hub, square data blocks written into Lumen
+    if (performance.now()-arcAt > 60){ arcSeed = Math.random()*1e9; arcAt = performance.now(); }
+    let s = arcSeed; const rnd = ()=>((s = (s*16807) % 2147483647)/2147483647);
+    lightning(pts, lens, color, a*(.55+.45*Math.sin(time*13)), 5, rnd);
+    for (let i=0;i<5;i++){ const k = ((time*.45+i/5)%1), [x,y] = pointAt(pts,lens,(fwd ? k : 1-k)*total);
+      ctx.save(); ctx.globalAlpha = a*Math.sin(Math.PI*k); ctx.fillStyle = "#f2e6ff"; ctx.shadowColor = color; ctx.shadowBlur = 12;
+      ctx.fillRect(x-3.5,y-3.5,7,7); ctx.strokeStyle = color; ctx.strokeRect(x-5.5,y-5.5,11,11); ctx.restore(); }
+    shock(src, color, time, a*.7); charge(dst, color, time, a);
+  } else shock(dst, color, time, a*.6);
+  uplinkLabel(pts, lens, ex, a);
+}
+function uplinkLabel(pts, lens, ex, a){
+  if (mode==='all') return;   // no room beside the control column; the Lumen module shows TEACH/LEARN itself
+  const [x,y] = pointAt(pts, lens, lens.at(-1)*.5), txt = ex.running
+    ? (ex.mode==="teach" ? "UPLINK LUMEN // TEACH · ORIENTANDO O ORQUESTRADOR" : ex.mode==="learn" ? "UPLINK LUMEN // LEARN · APRENDENDO A CORREÇÃO" : "UPLINK LUMEN // CONSULTA EM CURSO")
+    : "UPLINK LUMEN // CONCLUÍDO";
+  ctx.save(); ctx.globalAlpha = a; ctx.font = MONO(9); const w = ctx.measureText(txt).width+14;
+  ctx.fillStyle = "rgba(6,6,14,.9)"; chamfer(x-w/2, y-9, w, 18, 5); ctx.fill(); ctx.strokeStyle = ex.color; ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = ex.color; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(txt, x, y+1); ctx.restore();
+}
+// Lumen itself: an orbit of glyph satellites around the module while the consultation runs.
+function lumenAura(ex, time){
+  const v = vis.get(ex.lumen.id); if (!v || !v.shown) return;
+  const [w,h] = size(ex.lumen), fade = ex.running ? 1 : Math.max(0, 1-(Date.now()-ex.lumen.lastActiveAt)/20000);
+  ctx.save(); ctx.globalAlpha = v.alpha*fade; ctx.strokeStyle = ex.color; ctx.fillStyle = ex.color; ctx.lineWidth = 1;
+  if (ex.mode === "teach"){            // giving: golden rays radiate from the oracle
+    for (let i=0;i<16;i++){ const t = i*TAU/16, k = REDUCE ? .5 : .5+.5*Math.sin(time*3+i*1.7);
+      const r0x = w/2+6, r0y = h/2+6, r1 = 8+10*k; ctx.globalAlpha = v.alpha*fade*(.3+.6*k);
+      ctx.beginPath(); ctx.moveTo(v.x+Math.cos(t)*r0x, v.y+Math.sin(t)*r0y); ctx.lineTo(v.x+Math.cos(t)*(r0x+r1), v.y+Math.sin(t)*(r0y+r1)); ctx.stroke(); }
+  } else {                             // absorbing: dashed orbit contracting onto Lumen, satellites spiralling in
+    const k = REDUCE ? 0 : (time*.5)%1, rx = w/2+26-14*k, ry = h/2+22-12*k;
+    ctx.setLineDash([2,6]); ctx.lineDashOffset = REDUCE ? 0 : -time*30; ctx.globalAlpha = v.alpha*fade*(1-k*.6);
+    ctx.beginPath(); ctx.ellipse(v.x, v.y, rx, ry, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+    if (!REDUCE) for (let i=0;i<3;i++){ const t = time*(ex.running?1.6:.4)+i*TAU/3, px = v.x+Math.cos(t)*rx, py = v.y+Math.sin(t)*ry;
+      ctx.shadowColor = ex.color; ctx.shadowBlur = 10; ctx.beginPath(); ctx.moveTo(px,py-4); ctx.lineTo(px+4,py); ctx.lineTo(px,py+4); ctx.lineTo(px-4,py); ctx.closePath(); ctx.fill(); }
+  }
+  ctx.restore();
+}
+function notePoint(id){ const v = noteVis.get(id); return [v.x, v.y-NH/2]; }
+function drawConnections(time){
+  // Only real Maestri canvas connections are drawn.
+  const plan = hubPlan(), ex = lumenExchange();
+  if (ex) lumenAura(ex, time);
+  (data.connections||[]).forEach((c, ci)=>{
+    const A = agentById(c.from), B = agentById(c.to), key = "c|"+c.id;
+    let bundle = plan.get(c.id), alpha = 1;
+    if (c.note){
+      const t = A || B, nv = noteVis.get(c.note); if (!t || !nv || !nv.shown || !vis.get(t.id).shown) return;
+      if (!bundle) bundle = bundleOf(busRoute(edgePoint(t,"t"), notePoint(c.note), Math.min(vis.get(t.id).y-size(t)[1]/2, nv.y-NH/2)-16));
+      alpha = Math.min(vis.get(t.id).alpha, nv.alpha);
+    } else {
+      if (!A || !B) return;
+      const va = vis.get(A.id), vb = vis.get(B.id); if (!va.shown || !vb.shown) return;
+      alpha = Math.min(va.alpha, vb.alpha) * (Math.max(dimFor(A), dimFor(B)) > .5 ? 1 : .3);
+      if (!bundle) bundle = bundleOf(isControl(A)===isControl(B) && !isControl(A) ? route(edgePoint(A,"r"), edgePoint(B,"l")) : busRoute(edgePoint(A,"b"), edgePoint(B,"b"), Math.max(va.y,vb.y)+60));
+    }
+    // AMBOS mixes styles on the same routes (they never cross): circuit, cable, or a circuit that turns into a cable
+    // at a connector part way along the run.
+    let L = PREFS.links==="both" ? ["circuit","cable","hybrid"][(shash("style|"+c.id)+ci)%3] : PREFS.links;
+    const j = L==="hybrid" ? pickJunction(bundle, c.id, plan) : null;
+    if (j && !j.box) L = "circuit";   // no room for the junction box: keep it a plain circuit
+    if (L==="hybrid" && !(ex && !c.note && [c.from,c.to].includes(ex.hub.id) && [c.from,c.to].includes(ex.lumen.id))){
+      const head = {center:prefix(bundle.center,j.f0), strands:bundle.strands.map(st=>prefix(st,j.f0))},
+        tailB = {center:suffix(bundle.center,j.f1), strands:bundle.strands.map(st=>suffix(st,j.f1))}, a2 = alpha*(c.note?.6:1);
+      if (c.active){ ignite(key, head, colorFor(key), time, alpha); seenLinks.add(key+"~"); if (!ignition.has(key+"~")) ignition.set(key+"~", performance.now());
+        drawCable(key+"~", tailB, colorFor(key), time, alpha, true); }
+      else { circuitColor.delete(key); ignition.delete(key); idleTrace(head, a2); drawCable(key+"~", tailB, null, time, a2, false); }
+      drawJunction(j, bundleW(bundle.strands.length), c.active ? colorFor(key) : null, time, a2, c.id);
+      return;
+    }
+    if (ex && !c.note && [c.from,c.to].includes(ex.hub.id) && [c.from,c.to].includes(ex.lumen.id)){
+      if (L!=="circuit") drawCable(key, bundle, ex.color, time, alpha, false);
+      drawUplink(bundle, ex, time, alpha); return; }
+    if (c.active){
+      if (L!=="cable") ignite(key, bundle, colorFor(key), time, alpha);
+      else { seenLinks.add(key); if (!ignition.has(key)) ignition.set(key, performance.now()); }
+      if (L!=="circuit") drawCable(key, bundle, colorFor(key), time, alpha, true);
+    } else { circuitColor.delete(key); ignition.delete(key);
+      if (L!=="cable") idleTrace(bundle, alpha*(c.note?.6:1));
+      if (L!=="circuit") drawCable(key, bundle, null, time, alpha*(c.note?.6:1), false); }
+  });
+}
+function drawNotes(){
+  for (const n of data.notes||[]){
+    const v = noteVis.get(n.id); if (!v || v.alpha < .02) continue;
+    const live = (data.connections||[]).some(c=>c.note===n.id && c.active);
+    ctx.save(); ctx.globalAlpha = v.alpha * (scene.mode==="agent" ? .25 : 1);
+    chamfer(v.x-NW/2, v.y-NH/2, NW, NH, 8); ctx.fillStyle="rgba(14,8,22,.94)"; ctx.fill(); ctx.strokeStyle=live?C.violet:rgba(C.violet,.45); ctx.lineWidth=1.1; ctx.stroke();
+    ctx.fillStyle=live?C.violet:rgba(C.violet,.5); ctx.fillRect(v.x-NW/2, v.y-NH/2, 4, NH);
+    ctx.textAlign="left"; ctx.textBaseline="middle"; ctx.font=MONO(10); ctx.fillStyle=C.text;
+    ctx.fillText(fit(ctx,(n.kind==="noteStack"?"▤ ":"▭ ")+n.title,NW-16), v.x-NW/2+10, v.y-7);
+    ctx.fillStyle=C.muted; ctx.font=MONO(9); ctx.fillText(fit(ctx,n.subtitle || (n.lastModifiedAt?`editada ${ago(Date.parse(n.lastModifiedAt))} atrás`:"nota do canvas"),NW-16), v.x-NW/2+10, v.y+8);
+    ctx.restore();
+  }
+}
+function drawTools(time){
+  const now = performance.now(), byAgent = {};
+  for (const [key,t] of tools){
+    const a = agentById(t.agent), v = vis.get(t.agent);
+    if (!a || !v){ tools.delete(key); continue; }
+    if (t.gone && (now-t.gone)/1000 > 2.2){ tools.delete(key); continue; }
+    if (v.shown) (byAgent[t.agent] ||= []).push(t);
+  }
+  for (const [id, list] of Object.entries(byAgent)){
+    const a = agentById(id), v = vis.get(id), [w,h] = size(a), focus = scene.mode==="agent" && scene.target===id;
+    const limit = focus ? 8 : MAX_TOOLS, shown = list.sort((p,q)=>p.slot-q.slot).filter(t=>t.slot<limit);
+    const dim = (dimFor(a) > .5 ? 1 : .25) * v.alpha;
+    if (!shown.length) continue;
+    const sx = v.x - w/2 + 18, sy = v.y + h/2;
+    polyline([[sx,sy],[sx,Math.max(...shown.map(t=>toolPos(t,a)[1]))]], C.amber, 1.2, .7*dim);
+    for (const t of shown){
+      const [px,py] = toolPos(t,a), age=(now-t.born)/1000, out=t.gone?(now-t.gone)/1000:0;
+      const alpha = Math.min(1, age*4) * (t.gone ? Math.max(0,1-out/2.2) : 1) * dim, color = t.gone ? C.green : C.amber;
+      const slide = REDUCE ? 0 : Math.max(0, 1-age*3)*-26, jitter = !REDUCE && age < .3 ? (hash(t.name+Math.floor(now/40))%9)-4 : 0;
+      ctx.save(); ctx.globalAlpha = alpha;
+      polyline([[sx,py],[px+slide,py]], color, 1.2, 1); ctx.fillStyle=color; ctx.beginPath(); ctx.arc(sx,py,2.6,0,7); ctx.fill();
+      const x = px+slide+jitter, cw = 156, ch = 20;
+      chamfer(x, py-ch/2, cw, ch, 6); ctx.fillStyle="rgba(24,14,4,.94)"; ctx.fill(); ctx.strokeStyle=color; ctx.lineWidth=1; ctx.stroke();
+      ctx.fillStyle=color; ctx.fillRect(x, py-ch/2, 22, ch);
+      // the number is the order in which this tool appeared in the turn
+      ctx.fillStyle="#111"; ctx.font=MONO(10); ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(String(t.slot+1).padStart(2,"0"), x+11, py);
+      const label = t.name.replace(/^mcp__/,""), typed = REDUCE ? label : label.slice(0, Math.ceil(age*40));
+      ctx.textAlign="left"; ctx.fillStyle=t.gone?C.green:C.text; ctx.fillText(fit(ctx,(t.gone?"✔ ":"")+typed, cw-30), x+28, py);
+      ctx.restore();
+    }
+    const hidden = list.filter(t=>t.slot>=limit).length;
+    if (hidden){ const [px,py] = toolPos({agent:id,slot:limit},a); ctx.font=MONO(10); ctx.textAlign="left"; ctx.fillStyle=rgba(C.amber,dim); ctx.fillText(`+${hidden} ferramenta(s)`, px, py-4); }
+  }
+}
+function initials(name){
+  const parts = String(name).replace(/[^A-Za-zÀ-ú0-9 -]/g,"").split(/[\s-]+/).filter(Boolean);
+  return ((parts[0]||"?").slice(0,2) + (parts[1] && /^\d+$/.test(parts[1]) ? parts[1] : "")).toUpperCase();
+}
+// Ring = how recent the last Maestri/runtime activity is: full now, empty after a day (log scale).
+function recency(a){ if (!a.lastActiveAt) return 0; const s = Math.max(0,(Date.now()-a.lastActiveAt)/1000); return Math.max(0, 1-Math.log10(1+s)/Math.log10(1+86400)); }
+/* ---- Identity: every role has its own silhouette, emblem and signature (same bounding box, so routing pads stay valid) ---- */
+const ID_NAME = {orquestrador:"DECK DE COMANDO", consultor:"ORÁCULO", vigia:"SCANNER", auxiliar:"MÓDULO AUXILIAR",
+  triagem:"ADMISSÃO", analise:"PRISMA", implementacao:"FORJA", revisao:"ESCUDO", integracao:"CONECTOR"};
+const identity = a => isChief(a) ? "orquestrador" : a.slot;
+function shape(a, x, y, w, h, inset=0){
+  x += inset; y += inset; w -= 2*inset; h -= 2*inset;
+  const c = Math.max(4, 12 - inset), L = (...p)=>{ for (let i=0;i<p.length;i+=2) ctx.lineTo(p[i],p[i+1]); };
+  ctx.beginPath();
+  switch (identity(a)){
+    case "orquestrador":   // command deck: four cut corners and console notches on both flanks
+      ctx.moveTo(x+c,y); L(x+w-c,y, x+w,y+c, x+w,y+h*.36, x+w-6,y+h*.36+6, x+w-6,y+h*.64-6, x+w,y+h*.64, x+w,y+h-c, x+w-c,y+h,
+        x+c,y+h, x,y+h-c, x,y+h*.64, x+6,y+h*.64-6, x+6,y+h*.36+6, x,y+h*.36, x,y+c); break;
+    case "consultor": {    // oracle capsule
+      const r = Math.min(h/2, 24); ctx.moveTo(x+r,y); L(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r); L(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+      L(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r); L(x,y+r); ctx.arcTo(x,y,x+r,y,r); break; }
+    case "vigia":          // scanner: deep diagonal cuts
+      ctx.moveTo(x+2*c,y); L(x+w,y, x+w,y+h-2*c, x+w-2*c,y+h, x,y+h, x,y+2*c); break;
+    case "triagem":        // intake: mirrored cuts, mouth on the left flank where demands come in
+      ctx.moveTo(x,y); L(x+w-c,y, x+w,y+c, x+w,y+h, x+c,y+h, x,y+h-c, x,y+h*.62, x+7,y+h*.55, x+7,y+h*.38, x,y+h*.3); break;
+    case "analise":        // prism: pointed left facet
+      ctx.moveTo(x+16,y); L(x+w-c,y, x+w,y+c, x+w,y+h, x+16,y+h, x,y+h/2); break;
+    case "implementacao":  // forge: heavy square block with a stepped foot
+      ctx.moveTo(x,y); L(x+w,y, x+w,y+h-8, x+w-8,y+h-8, x+w-8,y+h, x+8,y+h, x+8,y+h-8, x,y+h-8); break;
+    case "revisao":        // shield: tapered base
+      ctx.moveTo(x+c,y); L(x+w-c,y, x+w,y+c, x+w,y+h-16, x+w-46,y+h, x+46,y+h, x,y+h-16, x,y+c); break;
+    case "integracao":     // connector: cut top-left / bottom-right like a plug housing
+      ctx.moveTo(x+c+6,y); L(x+w,y, x+w,y+h-c-6, x+w-c-6,y+h, x,y+h, x,y+c+6); break;
+    default: ctx.moveTo(x+c,y); L(x+w,y, x+w,y+h-c, x+w-c,y+h, x,y+h, x,y+c);
+  }
+  ctx.closePath();
+}
+// Emblem in the identity zone under the ring (x0,y0 = left/middle of a 36×12 slot).
+function emblem(a, x0, y0, color, time, live){
+  ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 1.4; ctx.beginPath();
+  switch (identity(a)){
+    case "orquestrador": for (let i=0;i<3;i++){ ctx.moveTo(x0+4+i*6, y0+5); ctx.arc(x0+4, y0+5, 3+i*6, -Math.PI/2.2, -.15); } ctx.stroke();
+      if (live && !REDUCE){ const t = time*2.4; ctx.beginPath(); ctx.moveTo(x0+4,y0+5); ctx.lineTo(x0+4+18*Math.cos(-.9+.7*Math.sin(t)), y0+5+18*Math.sin(-.9+.7*Math.sin(t))); ctx.stroke(); } break;
+    case "consultor": ctx.moveTo(x0,y0); ctx.quadraticCurveTo(x0+12,y0-9,x0+24,y0); ctx.quadraticCurveTo(x0+12,y0+9,x0,y0); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x0+12, y0, 3, 0, 7); ctx.fill(); break;
+    case "vigia": ctx.arc(x0+10,y0,6,0,7); ctx.moveTo(x0,y0); ctx.lineTo(x0+20,y0); ctx.moveTo(x0+10,y0-9); ctx.lineTo(x0+10,y0+9); ctx.stroke(); break;
+    case "triagem": for (let i=0;i<3;i++){ ctx.moveTo(x0+i*8,y0-5); ctx.lineTo(x0+5+i*8,y0); ctx.lineTo(x0+i*8,y0+5); }
+      ctx.globalAlpha *= live && !REDUCE ? .5+.5*Math.sin(time*6) : 1; ctx.stroke(); break;
+    case "analise": ctx.moveTo(x0,y0+6); ctx.lineTo(x0+7,y0-6); ctx.lineTo(x0+14,y0+6); ctx.closePath(); ctx.stroke();
+      ["#2de2e6","#ff3ec8","#fcee0a"].forEach((col,i)=>{ ctx.beginPath(); ctx.strokeStyle=col; ctx.moveTo(x0+11,y0); ctx.lineTo(x0+30,y0-5+i*5); ctx.stroke(); }); break;
+    case "implementacao": ctx.restore(); ctx.save(); ctx.beginPath(); ctx.rect(x0,y0-5,32,10); ctx.clip();
+      for (let i=-2;i<8;i++){ ctx.fillStyle = i%2 ? "#111" : color; ctx.beginPath(); ctx.moveTo(x0+i*6,y0+5); ctx.lineTo(x0+i*6+6,y0-5); ctx.lineTo(x0+i*6+12,y0-5); ctx.lineTo(x0+i*6+6,y0+5); ctx.fill(); } break;
+    case "revisao": ctx.moveTo(x0,y0-6); ctx.lineTo(x0+16,y0-6); ctx.lineTo(x0+16,y0+1); ctx.lineTo(x0+8,y0+7); ctx.lineTo(x0,y0+1); ctx.closePath(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x0+4,y0); ctx.lineTo(x0+7,y0+3); ctx.lineTo(x0+12,y0-3); ctx.stroke(); break;
+    case "integracao": ctx.moveTo(x0,y0-5); ctx.lineTo(x0+10,y0-5); ctx.lineTo(x0+16,y0); ctx.moveTo(x0,y0+5); ctx.lineTo(x0+10,y0+5); ctx.lineTo(x0+16,y0); ctx.lineTo(x0+28,y0); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x0+28,y0,2.5,0,7); ctx.fill(); break;
+    default: ctx.moveTo(x0+4,y0-5); ctx.lineTo(x0,y0-5); ctx.lineTo(x0,y0+5); ctx.lineTo(x0+4,y0+5); ctx.moveTo(x0+12,y0-5); ctx.lineTo(x0+16,y0-5); ctx.lineTo(x0+16,y0+5); ctx.lineTo(x0+12,y0+5); ctx.stroke();
+  }
+  ctx.restore();
+}
+// Signature features outside the panel; the ones tied to data say so.
+function signature(a, x, y, w, h, tc, time, live){
+  ctx.save();
+  switch (identity(a)){
+    case "orquestrador": {   // antenna + one bar per ACTIVE Maestri connection of this terminal
+      const ax = x+w-26, n = (data.connections||[]).filter(c=>c.active && (c.from===a.id || c.to===a.id)).length;
+      ctx.strokeStyle = rgba(tc,.9); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(ax,y); ctx.lineTo(ax,y-16); ctx.moveTo(ax-5,y-10); ctx.lineTo(ax+5,y-10); ctx.stroke();
+      ctx.save(); ctx.fillStyle = n ? C.cyan : rgba(tc,.4); ctx.globalAlpha *= n && !REDUCE ? .55+.45*Math.sin(time*5) : 1; ctx.beginPath(); ctx.arc(ax,y-17,2.6,0,7); ctx.fill(); ctx.restore();
+      for (let i=0;i<6;i++){ ctx.fillStyle = i<n ? C.cyan : rgba(tc,.18); ctx.fillRect(ax-62+i*6, y-4-(i+1)*2, 4, (i+1)*2); }
+      ctx.font = MONO(8); ctx.fillStyle = C.muted; ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.fillText(`${n} LINK${n===1?"":"S"}`, ax-66, y-6);
+      break; }
+    case "implementacao": {  // heat vents on the right flank glow while the forge works
+      for (let i=0;i<3;i++){ ctx.fillStyle = live ? rgba(C.amber, REDUCE ? .9 : .5+.5*Math.sin(time*7+i)) : rgba(tc,.3); ctx.fillRect(x+w+1, y+28+i*9, 6, 3); }
+      ctx.fillStyle = rgba(tc,.35); for (let i=0;i<w-16;i+=10) ctx.fillRect(x+8+i, y+h-5, 5, 2); break; }
+    case "integracao": {     // edge-connector pins on the base
+      for (let i=0;i<7;i++){ ctx.fillStyle = live ? C.yellow : rgba(tc,.45); ctx.fillRect(x+30+i*16, y+h, 8, 4); } break; }
+    case "vigia": {          // the watcher never stops scanning
+      if (!REDUCE){ const sy = y+6+((time*40)%(h-12)); ctx.strokeStyle = rgba(tc,.5); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x+6,sy); ctx.lineTo(x+w-6,sy); ctx.stroke(); } break; }
+    case "analise": {        // light enters the prism point
+      ctx.strokeStyle = rgba("#ffffff", live ? .8 : .25); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x-14, y+h/2); ctx.lineTo(x-2, y+h/2); ctx.stroke(); break; }
+    case "triagem": {        // intake mouth lights when a demand is being triaged
+      ctx.fillStyle = live ? C.cyan : rgba(tc,.35); ctx.fillRect(x+1, y+h*.38+1, 3, h*.17-2); break; }
+    case "consultor": {      // halo arcs: TEACH/LEARN mode tints them
+      ctx.strokeStyle = rgba(a.mode ? C.violet : tc, .5); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x+w/2, y+h/2, w/2+8, -0.35, 0.35); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x+w/2, y+h/2, w/2+8, Math.PI-0.35, Math.PI+0.35); ctx.stroke(); break; }
+  }
+  ctx.restore();
+}
+/* ---- Gauges: the ring inside each module measures something real of that role ---- */
+const modeOf = a => a.mode && !/^unknown$/i.test(a.mode) ? String(a.mode) : "";
+const TAU = Math.PI*2, DOC_ROLES = [["analysis","análise"],["implementation","implementação"],["review","revisão"]];
+const OWN_DOC = {analise:"analysis", implementacao:"implementation", revisao:"review"};
+const laneOf = a => (data.laneRuns||{})[String(a.floor||"").replace(/^Equipe\s+/i,"")];
+const left = s => s<=0 ? "agora" : s<90 ? `${Math.ceil(s)}s` : s<5400 ? `${Math.ceil(s/60)}m` : `${Math.round(s/3600)}h`;
+function docOutcome(run, role){ const s = run && [...(run.stages||[])].reverse().find(s=>s.role===role); return s ? s.outcome : ""; }
+function outcomeColor(o){ return /ready|approved|reviewed/.test(o) ? C.green : /reject|exhaust|fail/.test(o) ? C.fail : o ? C.yellow : null; }
+function arcSeg(x,y,r,a0,a1,color,width){ ctx.strokeStyle=color; ctx.lineWidth=width*.6; ctx.beginPath(); ctx.arc(x,y,r,a0,a1); ctx.stroke(); }
+function segRing(x,y,r,list){
+  const n = list.length, gap = n>1 ? .26 : 0, span = (TAU-gap*n)/n;
+  list.forEach((s,i)=>{ const a0 = -Math.PI/2+gap/2+i*(span+gap); arcSeg(x,y,r,a0,a0+span,rgba(s.color,.16),s.w); if (s.frac) arcSeg(x,y,r,a0,a0+span*s.frac,s.color,s.w); });
+}
+// Returns {kind, center, text, draw(x,y,r)}; text explains the reading in the datashard.
+function gaugeOf(a, sc, live, now){
+  const id = identity(a), rt = routinesOf(a), run = laneOf(a);
+  if (rt.length && (id==="orquestrador" || id==="vigia" || id==="auxiliar")){
+    const r0 = rt.find(r=>r.enabled) || rt[0], per = (r0.every||0)*1000, since = now - (r0.lastFiredAt||0);
+    const frac = r0.enabled && per && r0.lastFiredAt ? Math.min(1, since/per) : 0, rest = per ? (per-since)/1000 : 0;
+    return {kind:"RELÓGIO DE ROTINA", center: !r0.enabled ? "||" : r0.lastFiredAt ? left(rest) : "?",
+      text: `${r0.name} a cada ${every(r0.every)} · ${r0.enabled ? (r0.lastFiredAt ? `próximo disparo em ${left(rest)}` : "sem disparo registrado") : "pausada"}${rt.length>1?` · ${rt.length} rotinas`:""}`,
+      draw(x,y,r){ arcSeg(x,y,r,0,TAU,rgba(r0.enabled?C.cyan:C.muted,.16),4);
+        if (!r0.enabled){ ctx.setLineDash([3,4]); arcSeg(x,y,r,0,TAU,rgba(C.muted,.7),2); ctx.setLineDash([]); }
+        else arcSeg(x,y,r,-Math.PI/2,-Math.PI/2+TAU*Math.max(.02,frac),frac>.9?C.yellow:C.cyan,4);
+        for (let i=0;i<12;i++){ const t=i/12*TAU; ctx.fillStyle=rgba(C.text,i%3?.2:.5); ctx.fillRect(x+Math.cos(t)*(r+5)-1,y+Math.sin(t)*(r+5)-1,2,2); }
+        rt.forEach((q,i)=>{ ctx.fillStyle=q.enabled?C.cyan:rgba(C.muted,.6); ctx.fillRect(x-(rt.length-1)*3.5+i*7-2, y-r-9, 4, 4); }); }};
+  }
+  if (id==="orquestrador"){
+    const cs = (data.connections||[]).filter(c=>c.from===a.id || c.to===a.id), on = cs.filter(c=>c.active).length;
+    return {kind:"MATRIZ DE CONEXÕES", center: `${on}/${cs.length}`, text: `${on}/${cs.length} conexões do canvas ativas`,
+      draw(x,y,r){ segRing(x,y,r,(cs.length?cs:[{}]).map(c=>({color:c.active?C.cyan:C.muted, w:4, frac:c.active?1:0}))); }};
+  }
+  if (id==="triagem"){
+    const sh = data.shelves||{}, todo = sh["a-triar"]||0, done = sh.triados||0, tot = todo+done;
+    return {kind:"FILA DE TRIAGEM", center: `${todo} a triar`, text: `Trello: ${todo} card(s) a triar · ${done} triado(s)`,
+      draw(x,y,r){ arcSeg(x,y,r,0,TAU,rgba(C.yellow,.18),4); if (tot) arcSeg(x,y,r,-Math.PI/2,-Math.PI/2+TAU*done/tot,C.green,4);
+        if (tot && todo) arcSeg(x,y,r,-Math.PI/2+TAU*done/tot,-Math.PI/2+TAU,C.yellow,4); }};
+  }
+  if (id==="integracao"){
+    const teams = ["Alfa","Beta","Gama"], runs = teams.map(t=>(data.laneRuns||{})[t]), prs = runs.filter(q=>q&&q.pr).length;
+    return {kind:"BARRAMENTO DE PRs", center: `${prs} PR`,
+      text: teams.map((t,i)=>{ const q = runs[i]; return `${t}: ${q ? `${q.card} ${q.status}${q.pr?" · PR":""}` : "sem execução"}`; }).join(" · "),
+      draw(x,y,r){ segRing(x,y,r,runs.map((q,i)=>({color: !q ? C.muted : q.status==="failed" ? C.fail : TEAM[i+1][1], w:4,
+        frac: !q ? 0 : q.pr ? 1 : q.open ? .45 : .15}))); }};
+  }
+  if (OWN_DOC[a.slot]){
+    const own = OWN_DOC[a.slot], next = run && run.open ? (DOC_ROLES.find(([r])=>!/ready|approved|reviewed/.test(docOutcome(run,r)))||[])[0] : null;
+    const list = DOC_ROLES.map(([r])=>{ const c = outcomeColor(docOutcome(run,r)); return {color: c || (r===next ? C.cyan : C.muted), w: r===own ? 6 : 3, frac: c ? 1 : r===next ? .35 : 0}; });
+    list.push({color: run && run.pr ? C.green : C.muted, w:3, frac: run && run.pr ? 1 : 0});
+    return {kind:"PIPELINE DA EQUIPE", center: "",
+      text: run ? `${run.card} (${run.status}): ${DOC_ROLES.map(([r,l])=>`${l} ${docOutcome(run,r)||"—"}`).join(" · ")} · PR ${run.pr?"sim":"não"}` : "sem execução da fila nesta equipe",
+      draw(x,y,r){ segRing(x,y,r,list); }};
+  }
+  const frac = recency(a);
+  return {kind: id==="consultor" ? "LENTE DE ATIVIDADE" : "RECÊNCIA", center: id==="consultor" && modeOf(a) ? modeOf(a).toUpperCase() : ago(a.lastActiveAt),
+    text: `última atividade ${a.lastActiveAt ? `há ${ago(a.lastActiveAt)}` : "desconhecida"}${modeOf(a) ? ` · modo ${modeOf(a)}` : ""} (anel cheio = agora, vazio = 1 dia)`,
+    draw(x,y,r){ arcSeg(x,y,r,0,TAU,rgba(sc,.18),4); arcSeg(x,y,r,-Math.PI/2,-Math.PI/2+TAU*Math.max(.04,frac),modeOf(a)?C.violet:sc,4);
+      if (id==="consultor"){ arcSeg(x,y,r-6,0,TAU,rgba(modeOf(a)?C.violet:sc,.35),1); } }};
+}
+/* ---- Role icon at the centre of the gauge: who it is at a glance; its colour is the state ---- */
+function roleIconPass(a, cx, cy, s, color, live){
+  const id = identity(a), P = (pts)=>{ ctx.moveTo(cx+pts[0]*s, cy+pts[1]*s); for (let i=2;i<pts.length;i+=2) ctx.lineTo(cx+pts[i]*s, cy+pts[i+1]*s); };
+  ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = Math.max(1.4, s*.16); ctx.lineJoin = "miter"; ctx.lineCap = "butt";
+  if (live){ ctx.shadowColor = color; ctx.shadowBlur = 10; }
+  ctx.beginPath();
+  switch (id){
+    case "orquestrador": P([-.8,.45, -.8,-.35, -.4,.05, 0,-.6, .4,.05, .8,-.35, .8,.45]); ctx.closePath(); ctx.stroke();       // crown
+      ctx.beginPath(); P([-.8,.7, .8,.7]); ctx.stroke(); break;
+    case "consultor": P([-.95,0, -.45,-.45, .45,-.45, .95,0, .45,.45, -.45,.45]); ctx.closePath(); ctx.stroke();             // angular eye
+      ctx.beginPath(); P([0,-.25, .25,0, 0,.25, -.25,0]); ctx.closePath(); ctx.fill(); break;
+    case "vigia": P([-.85,-.45, -.85,-.85, -.45,-.85]); P([.45,-.85, .85,-.85, .85,-.45]); P([.85,.45, .85,.85, .45,.85]); P([-.45,.85, -.85,.85, -.85,.45]); // targeting brackets
+      P([-.5,0, -.15,0]); P([.15,0, .5,0]); P([0,-.5, 0,-.15]); P([0,.15, 0,.5]); ctx.stroke(); ctx.fillRect(cx-.08*s,cy-.08*s,.16*s,.16*s); break;
+    case "triagem": P([-.85,-.6, .85,-.6, .2,.1, .2,.75, -.2,.55, -.2,.1]); ctx.closePath(); ctx.stroke(); break;             // funnel
+    case "analise": P([0,-.7, .7,.55, -.7,.55]); ctx.closePath(); ctx.stroke();                                                    // prism + light
+      ctx.beginPath(); P([-1,-.15, -.3,-.05]); ctx.stroke(); ctx.beginPath(); P([.3,0, 1,-.35]); P([.35,.15, 1,.2]); ctx.stroke(); break;
+    case "implementacao": ctx.save(); ctx.translate(cx,cy); ctx.rotate(-Math.PI/4);                                               // hammer
+      ctx.strokeRect(-.6*s,-.75*s,1.2*s,.5*s); ctx.beginPath(); ctx.moveTo(0,-.25*s); ctx.lineTo(0,.95*s); ctx.stroke(); ctx.restore(); break;
+    case "revisao": P([-.65,-.7, .65,-.7, .65,.05, 0,.8, -.65,.05]); ctx.closePath(); ctx.stroke();                                // shield + check
+      ctx.beginPath(); P([-.3,-.05, -.05,.25, .35,-.3]); ctx.stroke(); break;
+    case "integracao": P([-.85,-.6, -.2,-.6, .2,0]); P([-.85,.6, -.2,.6, .2,0]); P([.2,0, .85,0]); ctx.stroke();                   // merge
+      ctx.beginPath(); P([.55,-.3, .9,0, .55,.3]); ctx.stroke(); break;
+    default: {                                                                                                                     // generic CLI agent marks
+      const t = String(a.agentType||"").toLowerCase();
+      if (t.includes("claude")){ for (let i=0;i<4;i++){ const r = i*Math.PI/4; P([Math.cos(r)*.8, Math.sin(r)*.8, Math.cos(r)*.25, Math.sin(r)*.25]); P([-Math.cos(r)*.8, -Math.sin(r)*.8, -Math.cos(r)*.25, -Math.sin(r)*.25]); } ctx.stroke(); }
+      else if (t.includes("codex")){ P([-.35,-.6, -.85,0, -.35,.6]); P([.35,-.6, .85,0, .35,.6]); P([.15,-.7, -.15,.7]); ctx.stroke(); }
+      else { P([-.8,-.5, -.25,0, -.8,.5]); P([0,.55, .8,.55]); ctx.stroke(); }
+    }
+  }
+  ctx.restore();
+}
+// Chromatic aberration (pink/cyan ghosts) + neon core; a brief horizontal tear while the state is fresh.
+function roleIcon(a, cx, cy, s, color, live, tear=0){
+  if (!REDUCE){ ctx.save(); ctx.globalAlpha *= live ? .55 : .3;
+    roleIconPass(a, cx-1.4+tear, cy, s, "#ff3ec8", false); roleIconPass(a, cx+1.4-tear, cy, s, "#2de2e6", false); ctx.restore(); }
+  roleIconPass(a, cx, cy, s, color, live);
+  if (live && !REDUCE){ ctx.save(); ctx.fillStyle = rgba(color,.18); for (let i=-1;i<=1;i++) ctx.fillRect(cx-s, cy+i*s*.5, 2*s, 1); ctx.restore(); }
+}
+function drawGauge(a, rx, ry, rr, sc, live, time, ctrl, chief){
+  const g = gaugeOf(a, sc, live, Date.now()), v = vis.get(a.id);
+  g.draw(rx, ry, rr);
+  if (live && !REDUCE){ const t = time*3; ctx.fillStyle = "#fff"; ctx.shadowColor = C.cyan; ctx.shadowBlur = 8;
+    ctx.beginPath(); ctx.arc(rx+Math.cos(t)*(rr+4), ry+Math.sin(t)*(rr+4), 1.8, 0, TAU); ctx.fill(); ctx.shadowBlur = 0; }
+  const ic = a.attention ? C.yellow : a.state==="unknown" ? rgba(C.text,.45) : sc;
+  const tear = v && !REDUCE && Date.now()-v.glitch < 320 ? ((hash(a.id+Math.floor(Date.now()/45))%5)-2) : 0;
+  roleIcon(a, rx, ry, rr*.58, ic, live, tear);
+  if (g.center){ ctx.font = MONO(ctrl?8.5:9); ctx.fillStyle = chief ? C.yellow : C.muted; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(g.center, rx, ry+rr+(ctrl?7:9)); }
+}
+function drawModule(a, time, now){
+  const v = vis.get(a.id); if (!v || v.alpha < .02) return;
+  const [w,h] = size(a), x = v.x-w/2, y = v.y-h/2, ctrl = isControl(a), chief = isChief(a);
+  const tc = ctrl ? (chief ? C.yellow : "#2f8cff") : teamColor(a.floor), mc = hex6(a.color, tc), sc = STATE_COLOR[a.state]||C.muted;
+  const live = a.state==="working", idle = a.state==="unknown" && !a.attention;
+  ctx.save(); ctx.globalAlpha = v.alpha * dimFor(a) * (idle ? .75 : 1);
+  const g = !REDUCE && now - v.glitch < 320 ? ((hash(a.id+Math.floor(now/45))%11)-5) : 0;
+  ctx.translate(g, 0);
+  if (live){ ctx.shadowColor=C.cyan; ctx.shadowBlur=REDUCE?12:18+6*Math.sin(time*3.2); }
+  shape(a,x,y,w,h); ctx.fillStyle=C.panel; ctx.fill(); ctx.shadowBlur=0;
+  const boot = REDUCE ? 1 : Math.min(1,(now-v.boot)/600);   // frame draws itself when a turn starts
+  ctx.save(); ctx.beginPath(); ctx.rect(x-2,y-2,(w+4)*boot,h+4); ctx.clip();
+  shape(a,x,y,w,h); ctx.lineWidth=1.4; ctx.strokeStyle = live ? C.cyan : a.attention ? C.yellow : rgba(tc,.85); ctx.stroke();
+  shape(a,x,y,w,h,4); ctx.lineWidth=.8; ctx.strokeStyle=rgba(tc,.25); ctx.stroke();
+  ctx.restore();
+  brackets(x,y,w,h, live?C.cyan:rgba(tc,.6), selected===a.id ? 9+2*Math.sin(time*5) : 5);
+  signature(a,x,y,w,h,tc,time,live);
+  // stage · team above the module (live mode has no column headers)
+  if (mode==="live" && !chief){ ctx.font=MONO(10); ctx.textAlign="right"; ctx.textBaseline="middle"; ctx.fillStyle=tc;
+    ctx.fillText(`${STAGE_LABEL[a.slot]||a.slot} · ${teamName(a.floor)}`, x+w-2, y-16); }
+  // header tab carries the terminal colour set in the Maestri canvas
+  ctx.font=HEADF(ctrl?13:14); const tabW = Math.min(w-92, ctx.measureText(a.name.toUpperCase()).width+22);
+  ctx.fillStyle = mc; ctx.beginPath(); ctx.moveTo(x+10,y-9); ctx.lineTo(x+10+tabW,y-9); ctx.lineTo(x+18+tabW,y+1); ctx.lineTo(x+10,y+1); ctx.closePath(); ctx.fill();
+  ctx.fillStyle="#0a0a12"; ctx.textAlign="left"; ctx.textBaseline="middle"; ctx.fillText(fit(ctx,a.name.toUpperCase(),tabW-12), x+17, y-4);
+  ctx.font=MONO(9); ctx.fillStyle=rgba(tc,.85); ctx.textAlign="right";
+  ctx.fillText(`${(a.agentType||"?").toUpperCase().replace("CLAUDE_CODE","CLAUDE").replace("OPEN_CODE","OPENCODE")} · ${ago(a.lastActiveAt)}`, x+w-10, y+11);
+  const rr = ctrl ? 15 : 19, rx = x+14+rr, ry = y+h/2+(ctrl?3:2);
+  drawGauge(a, rx, ry, rr, sc, live, time, ctrl, chief);
+  const tx = rx+rr+10, tw = x+w-10-tx; ctx.textAlign="left";
+  ctx.font=MONO(10); ctx.fillStyle=C.muted; ctx.fillText(fit(ctx,(a.role||STAGE_LABEL[a.slot]||a.slot).toUpperCase(),tw), tx, y+24);
+  const label = STATE[a.state]||"OCIOSO"; const lw = ctx.measureText(label).width+10;
+  ctx.fillStyle=sc; ctx.fillRect(tx, y+33, lw, 13); ctx.fillStyle="#111"; ctx.fillText(label, tx+5, y+40);
+  const extra = modeOf(a) ? modeOf(a).toUpperCase() : a.attention ? "ATENÇÃO" : "";
+  if (extra){ const ew = ctx.measureText(extra).width+10; ctx.fillStyle=modeOf(a)?C.violet:C.yellow; ctx.fillRect(tx+lw+5, y+33, ew, 13); ctx.fillStyle="#111"; ctx.fillText(extra, tx+lw+10, y+40); }
+  if (!ctrl){
+    ctx.fillStyle=a.task?C.yellow:rgba(C.muted,.7); ctx.fillText(fit(ctx,a.task?"▸ "+a.task:"▸ sem tarefa vinculada",tw), tx, y+58);
+    // segments = tools (amber) and skills (violet) actually observed in the turn
+    const nt = (a.lastTools||[]).length, ns = (a.skills||[]).length, seg = tw/12;
+    for (let i=0;i<12;i++){ ctx.fillStyle = i<nt ? rgba(C.amber, live?.95:.5) : i<nt+ns ? rgba(C.violet, live?.95:.5) : rgba(tc,.12); ctx.fillRect(tx+i*seg, y+70, seg-2, 6); }
+    ctx.font=MONO(9); ctx.fillStyle=C.muted; ctx.fillText(`${nt} tool(s) · ${ns} skill(s)`, tx, y+84);
+  } else {
+    const rt = routinesOf(a);
+    if (a.task){ ctx.fillStyle=C.yellow; ctx.fillText(fit(ctx,"▸ "+a.task,tw), tx, y+58); }
+    else if (rt.length){ const r0 = rt[0]; ctx.fillStyle=r0.enabled?C.cyan:C.muted;
+      ctx.fillText(fit(ctx,`⟳ ${r0.name} ${every(r0.every)} · ${r0.enabled?"ativa":"pausada"}${rt.length>1?` +${rt.length-1}`:""}`,tw), tx, y+58); }
+  }
+  if (live && !REDUCE){ const sy = y + ((time*60)%h); ctx.fillStyle=rgba(C.cyan,.10); ctx.fillRect(x+2, sy, w-4, 8); }
+  if (v.flash>0){ ctx.globalAlpha = v.flash*dimFor(a)*v.alpha; shape(a,x,y,w,h,-6-14*(1-v.flash)); ctx.strokeStyle=v.flashColor; ctx.lineWidth=2; ctx.stroke(); }
+  if (a.attention && (REDUCE || Math.floor(time*2)%2===0)){
+    ctx.globalAlpha = dimFor(a)*v.alpha; ctx.fillStyle=C.yellow; ctx.fillRect(x+w-62, y+h-5, 52, 11);
+    ctx.fillStyle="#111"; ctx.font=MONO(9); ctx.textAlign="center"; ctx.fillText("ATENÇÃO", x+w-36, y+h+1);
+  }
+  ctx.restore();
+}
+function drawDatashard(time, now){
+  if (scene.mode!=="agent") return;
+  const a = agentById(scene.target), v = vis.get(scene.target); if (!a||!v) return;
+  const [w] = size(a), x = v.x+w/2+40, y = v.y-90, W = 340, H = 276, open = REDUCE ? 1 : Math.min(1,(now-scene.since-450)/350);
+  if (open<=0) return;
+  ctx.save();
+  polyline([[v.x+w/2,v.y],[x,v.y]], C.cyan, 1.2, open); pads([[v.x+w/2,v.y],[x,v.y]], C.cyan, open);
+  ctx.beginPath(); ctx.rect(x-4, y-14, W+8, (H+24)*open); ctx.clip();
+  chamfer(x,y,W,H,16); ctx.fillStyle="rgba(4,14,20,.94)"; ctx.fill(); ctx.strokeStyle=C.cyan; ctx.lineWidth=1.3; ctx.stroke();
+  brackets(x,y,W,H,C.cyan,6,14);
+  ctx.fillStyle=C.cyan; ctx.fillRect(x, y, W, 22);
+  ctx.fillStyle="#061015"; ctx.font=HEADF(15); ctx.textAlign="left"; ctx.textBaseline="middle"; ctx.fillText(`DATASHARD // ${a.name.toUpperCase()}`, x+10, y+11);
+  const rt = routinesOf(a).map(r=>`${r.name} ${every(r.every)} ${r.enabled?"ativa":"pausada"}`).join("; ");
+  const rows = [["EQUIPE",a.floor],["ETAPA",STAGE_LABEL[a.slot]||a.slot],["ESTADO",`${STATE[a.state]||a.state} (Maestri: ${a.maestriStatus||"—"})`],["TAREFA",a.task||"—"],
+    ["COLUNA",a.column||"—"],["TOOLS",(a.lastTools||[]).map(t=>t.replace(/^mcp__/,"")).join(", ")||"—"],["SKILLS",(a.skills||[]).join(", ")||"—"],
+    ["ROTINAS",rt||"—"],["MEDIDOR",(g=>`${g.kind}: ${g.text}`)(gaugeOf(a,STATE_COLOR[a.state]||C.muted,a.state==="working",Date.now()))],["ATIVIDADE",a.lastActiveAt?`${ago(a.lastActiveAt)} atrás`:"—"]];
+  const reveal = REDUCE ? 1e9 : (now-scene.since-600)/12;
+  let chars = 0; ctx.font=MONO(10.5);
+  rows.forEach(([k,val],i)=>{ const yy=y+36+i*14; ctx.fillStyle=C.muted; ctx.fillText(k,x+10,yy);
+    const s = String(val), n = Math.max(0, Math.min(s.length, reveal-chars)); chars += s.length;
+    ctx.fillStyle=C.text; ctx.fillText(fit(ctx,s.slice(0,n),W-100),x+90,yy); });
+  const ty = y+36+rows.length*14+2;
+  ctx.fillStyle=rgba(C.cyan,.25); ctx.fillRect(x+10,ty,W-20,1);
+  ctx.fillStyle=C.cyan; ctx.fillText("CAUDA DO TERMINAL (preview do Wire)", x+10, ty+11);
+  ctx.fillStyle="#bff8ff"; ctx.font=MONO(10);
+  const tail = (a.tail&&a.tail.length?a.tail:["(preview vazio)"]).slice(-4);
+  tail.forEach((line,i)=>{ const n = Math.max(0, Math.min(line.length, reveal-chars)); chars += line.length;
+    ctx.fillText(fit(ctx,line.slice(0,n),W-20), x+10, ty+26+i*13); });
+  ctx.restore();
+}
+function drawEmpty(w,h){
+  if (mode!=="live" || [...layout.visible].length) return;
+  ctx.save(); ctx.textAlign="center"; ctx.textBaseline="middle";
+  ctx.font=HEADF(26); ctx.fillStyle=C.muted; ctx.fillText("NENHUM AGENTE EXECUTANDO AGORA", w/2, h/2-18);
+  ctx.font=MONO(11); ctx.fillStyle=C.text;
+  const att = data.agents.filter(a=>a.attention).length, ev = (data.events||[])[0];
+  ctx.fillText(`${data.agents.length} terminais em espera${att?` · ${att} pedem atenção`:""} · lista abaixo`, w/2, h/2+12);
+  if (ev){ ctx.fillStyle=C.muted; ctx.fillText(fit(ctx,`último evento ${hhmm(ev.at)}: ${ev.text}`, w-60), w/2, h/2+32); }
+  ctx.restore();
+}
+function drawTransition(t, w, h){
+  if (!tween || REDUCE) return;
+  const k = Math.sin(Math.PI*t);
+  ctx.save();
+  ctx.strokeStyle=rgba(C.cyan,.25*k); ctx.lineWidth=1;
+  for (let i=0;i<48;i++){ const ang = i/48*Math.PI*2 + (hash(i)%100)/300, r0 = 60+(hash(i*7)%200), r1 = r0 + 260*k;
+    ctx.beginPath(); ctx.moveTo(w/2+Math.cos(ang)*r0, h/2+Math.sin(ang)*r0); ctx.lineTo(w/2+Math.cos(ang)*r1, h/2+Math.sin(ang)*r1); ctx.stroke(); }
+  for (let i=0;i<7;i++){ const y = (hash(i+Math.floor(performance.now()/60))%1000)/1000*h, bh = 2+(hash(i*13)%14);
+    ctx.fillStyle = i%2 ? rgba(C.red,.18*k) : rgba(C.cyan,.14*k); ctx.fillRect(0,y,w,bh); }
+  // caption sits in the stage's bottom-right corner, never over the modules
+  const tx = w-24, ty = h-(tween.sub ? 62 : 36);
+  ctx.globalAlpha = k; ctx.font=HEADF(22); ctx.textAlign="right"; ctx.textBaseline="middle";
+  ctx.fillStyle=C.red; ctx.fillText(tween.label, tx+3, ty); ctx.fillStyle=C.cyan; ctx.fillText(tween.label, tx-3, ty);
+  ctx.fillStyle=C.text; ctx.fillText(tween.label, tx, ty);
+  if (tween.sub){ ctx.font=MONO(12); ctx.fillStyle=C.yellow; ctx.fillText(fit(ctx,tween.sub,w*.55), tx, ty+26); }
+  ctx.restore();
+}
+/* ================= link style preferences ================= */
+const PREFS = (()=>{ let p = {}; try { p = JSON.parse(localStorage.getItem("fluxo-neon-prefs")||"{}"); } catch (_) {}
+  return {links: ["circuit","cable","both"].includes(p.links) ? p.links : "circuit"}; })();
+function savePrefs(){ try { localStorage.setItem("fluxo-neon-prefs", JSON.stringify(PREFS)); } catch (_) {} }
+
+/* ---- cyberpunk cables: worn, uneven cables over the same routes, with tape, splices, ties and repairs ---- */
+const CABLE_SKIN = ["#3b3552","#2e3a4f","#46384f","#33404a","#3a3a44"];
+// Cables are not drawn tight: corners become fillets and the run wanders a little (sagging, uneven), per cable.
+function cablePath(pts, seed, r=18){
+  const f = [pts[0]];
+  for (let i=1;i<pts.length-1;i++){ const a=pts[i-1], b=pts[i], c=pts[i+1];
+    const l1 = Math.hypot(b[0]-a[0], b[1]-a[1]) || 1, l2 = Math.hypot(c[0]-b[0], c[1]-b[1]) || 1, rr = Math.min(r, l1/2, l2/2);
+    const p1 = [b[0]-(b[0]-a[0])/l1*rr, b[1]-(b[1]-a[1])/l1*rr], p2 = [b[0]+(c[0]-b[0])/l2*rr, b[1]+(c[1]-b[1])/l2*rr];
+    f.push(p1); for (const t of [.25,.5,.75]) f.push([(1-t)*(1-t)*p1[0]+2*(1-t)*t*b[0]+t*t*p2[0], (1-t)*(1-t)*p1[1]+2*(1-t)*t*b[1]+t*t*p2[1]]); f.push(p2); }
+  f.push(pts.at(-1));
+  const lens = lengths(f), total = lens.at(-1), amp = .5 + (seed%7)/7*.5, fr = .03 + (seed%5)*.008, ph = seed%100, path = new Path2D();
+  for (let d=0; d<=total+.01; d+=7){ const dd = Math.min(d,total), [x,y,dx,dy] = pointAt(f, lens, dd), env = Math.min(1, dd/28, (total-dd)/28);
+    const o = env*amp*(Math.sin(dd*fr+ph) + .45*Math.sin(dd*fr*2.7+ph*1.3)); d ? path.lineTo(x-dy*o, y+dx*o) : path.moveTo(x, y); }
+  return path;
+}
+function cablePatch(type, cw, active, color, time, seed){
+  if (type===0){ // electrical tape, wrapped a few turns
+    ctx.fillStyle = ["#c9a227","#8a8f98","#d9d9d9","#2b2b33"][seed%4]; ctx.fillRect(-5, -cw/2-1.6, 10, cw+3.2);
+    ctx.strokeStyle = "rgba(0,0,0,.45)"; ctx.lineWidth = .6; for (let k=-3;k<=3;k+=3){ ctx.beginPath(); ctx.moveTo(k-1,-cw/2-1.6); ctx.lineTo(k+1,cw/2+1.6); ctx.stroke(); }
+  } else if (type===1){ // splice sleeve with metal rims
+    ctx.fillStyle = "#17161f"; ctx.fillRect(-10, -cw/2-2.6, 20, cw+5.2);
+    ctx.strokeStyle = active ? rgba(color,.7) : "rgba(255,255,255,.22)"; ctx.lineWidth = .8; ctx.strokeRect(-10, -cw/2-2.6, 20, cw+5.2);
+    ctx.fillStyle = "#7a7f8c"; ctx.fillRect(-11, -cw/2-3, 2, cw+6); ctx.fillRect(9, -cw/2-3, 2, cw+6);
+    if (active && !REDUCE && (hash(seed+"|"+Math.floor(time*4))%9===0)){ ctx.fillStyle = "#fff"; ctx.shadowColor = color; ctx.shadowBlur = 12; ctx.fillRect(-1.5,-1.5,3,3); ctx.shadowBlur = 0; }
+  } else if (type===2){ // zip tie
+    ctx.fillStyle = "#0d0d12"; ctx.fillRect(-1.3, -cw/2-2.2, 2.6, cw+4.4); ctx.fillRect(1.3, cw/2, 3, 2.4);
+  } else { // field repair: a mismatched sleeve with stitches
+    ctx.fillStyle = ["#3d5a4a","#4b4a2e","#2e4b5a"][seed%3]; ctx.fillRect(-13, -cw/2-.6, 26, cw+1.2);
+    ctx.strokeStyle = "rgba(230,230,230,.55)"; ctx.lineWidth = .7;
+    for (let k=-11;k<=11;k+=4){ ctx.beginPath(); ctx.moveTo(k-1.5,-cw/2-1.4); ctx.lineTo(k+1.5,cw/2+1.4); ctx.stroke(); }
+  }
+}
+function cablePlug(p, q, cw, color){
+  const ang = Math.atan2(p[1]-q[1], p[0]-q[0]);
+  ctx.save(); ctx.translate(p[0], p[1]); ctx.rotate(ang);
+  ctx.fillStyle = "#1f1e2a"; ctx.fillRect(-11, -cw/2-2.5, 11, cw+5);
+  ctx.strokeStyle = color || "#5a6070"; ctx.lineWidth = 1; ctx.strokeRect(-11, -cw/2-2.5, 11, cw+5);
+  ctx.fillStyle = color || "#6b7080"; ctx.fillRect(-3, -cw/2-1, 3, cw+2); ctx.restore();
+}
+function drawCable(key, bundle, color, time, alpha, active){
+  const n = bundle.strands.length, prog = active && ignition.has(key) ? (REDUCE ? 1 : Math.min(1, (performance.now()-ignition.get(key))/(320+lengths(bundle.center).at(-1)*1.8))) : 1;
+  bundle.strands.forEach((s, j)=>{
+    const seed = shash(key+"#"+j), cw = (n>1 ? 2.2 : 2.8) + (seed%10)/10*.6, path = cablePath(s, seed), lens = lengths(s), total = lens.at(-1);
+    ctx.save(); ctx.globalAlpha = alpha; ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.save(); ctx.translate(1.2, 2); ctx.strokeStyle = "rgba(0,0,0,.55)"; ctx.lineWidth = cw+2.5; ctx.stroke(path); ctx.restore();
+    if (active){ const lit = cablePath(prefix(s, ease(prog)), seed); ctx.strokeStyle = rgba(color, .18); ctx.lineWidth = cw+9; ctx.stroke(lit); }
+    ctx.strokeStyle = CABLE_SKIN[seed % CABLE_SKIN.length]; ctx.lineWidth = cw; ctx.stroke(path);
+    ctx.strokeStyle = "rgba(255,255,255,.16)"; ctx.lineWidth = Math.max(.6, cw*.28); ctx.stroke(path);
+    if (active){ const lit = cablePath(prefix(s, ease(prog)), seed); ctx.strokeStyle = rgba(color, .95); ctx.lineWidth = 1.1; ctx.stroke(lit); }
+    const count = 2 + seed % 3;
+    for (let i=0;i<count;i++){ const h = shash(key+"#"+j+"#"+i), f = .12 + (h%1000)/1000*.76, [x,y,dx,dy] = pointAt(s, lens, f*total);
+      ctx.save(); ctx.translate(x, y); ctx.rotate(Math.atan2(dy, dx)); cablePatch(h%4, cw, active, color, time, h); ctx.restore(); }
+    ctx.restore();
+    if (active && prog>=1) pulses(s, color, time+j*.17, .4, 2);
+    ctx.save(); ctx.globalAlpha = alpha; cablePlug(s[0], s[1], cw, active ? color : null); cablePlug(s.at(-1), s.at(-2), cw, active ? color : null); ctx.restore();
+  });
+}
+
+/* ---- junction box: where a circuit trace becomes a cable (AMBOS) ---- */
+const JBOX = 24;   // length along the route
+// Pick a straight, uncluttered spot: away from corners, other routes and modules; fall back to the middle.
+function pickJunction(bundle, cid, plan){
+  const pts = bundle.center, lens = lengths(pts), total = lens.at(-1), hh = bundleW(bundle.strands.length)/2 + 5;   // box half-height
+  const others = [];
+  for (const [id, b] of plan) if (id !== cid){ const oh = bundleW(b.strands.length)/2 + 1; for (let i=1;i<b.center.length;i++) others.push([b.center[i-1], b.center[i], oh]); }
+  const rects = [...layout.visible].map(id=>{ const a = agentById(id), v = vis.get(id); if (!a||!v) return null; const [w,h] = size(a); return [v.tx-w/2, v.ty-h/2, v.tx+w/2, v.ty+h/2]; }).filter(Boolean);
+  const segDist = (p,a,b)=>{ const dx=b[0]-a[0], dy=b[1]-a[1], l2=dx*dx+dy*dy||1, t=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/l2)); return Math.hypot(p[0]-a[0]-t*dx, p[1]-a[1]-t*dy); };
+  const cands = []; for (let f=.1; f<=.9; f+=.03) cands.push(f);
+  cands.sort((p,q)=>shash(cid+"|"+p.toFixed(2))-shash(cid+"|"+q.toFixed(2)));   // a random valid spot per page load
+  for (const f of cands){
+    const d = f*total; let i = 1; while (i < lens.length-1 && lens[i] < d) i++;
+    if (d - lens[i-1] < JBOX/2+6 || lens[i] - d < JBOX/2+6) continue;          // straight run only, off the corners
+    const [x,y,dx,dy] = pointAt(pts, lens, d), axis = [-1,-.5,0,.5,1].map(k=>[x+dx*k*JBOX/2, y+dy*k*JBOX/2]);
+    if (others.some(([a,b,oh])=>axis.some(q=>segDist(q,a,b) < hh+oh+2))) continue;
+    if (rects.some(([x0,y0,x1,y1])=>axis.some(([qx,qy])=>qx > x0-hh-4 && qx < x1+hh+4 && qy > y0-hh-4 && qy < y1+hh+4))) continue;
+    return {f0:(d-JBOX/2)/total, f1:(d+JBOX/2)/total, p:[x,y], ang:Math.atan2(dy,dx), box:true};
+  }
+  return {f0:.5, f1:.5, p:pointAt(pts, lens, total/2), ang:0, box:false};
+}
+function drawJunction(j, bw, color, time, alpha, cid){
+  if (!j.box) return;
+  const w = JBOX, h = bw + 10, c = color || "#5a6070";
+  ctx.save(); ctx.globalAlpha = alpha; ctx.translate(j.p[0], j.p[1]); ctx.rotate(j.ang);
+  if (color){ ctx.shadowColor = color; ctx.shadowBlur = 10; }
+  chamfer(-w/2, -h/2, w, h, 4); ctx.fillStyle = "#14131d"; ctx.fill(); ctx.shadowBlur = 0;
+  ctx.strokeStyle = c; ctx.lineWidth = 1.1; ctx.stroke();
+  ctx.fillStyle = "#0a0a10"; ctx.fillRect(-w/2+4, -h/2+3, w-8, h-6);                   // inner panel
+  ctx.fillStyle = "#6b7080"; for (const [sx,sy] of [[-w/2+2.2,-h/2+2.2],[w/2-2.2,-h/2+2.2],[-w/2+2.2,h/2-2.2],[w/2-2.2,h/2-2.2]]){ ctx.beginPath(); ctx.arc(sx,sy,.9,0,TAU); ctx.fill(); }
+  const leds = [C.green, C.amber, color || C.cyan];
+  leds.forEach((lc,k)=>{ const on = color ? (REDUCE || (Math.floor(time*(3+k*1.7) + hash(cid+k)%7) % 3) !== 0) : k===0 && Math.floor(time*.8)%2===0;
+    ctx.fillStyle = on ? lc : rgba(lc, .18); if (on){ ctx.shadowColor = lc; ctx.shadowBlur = 6; }
+    ctx.beginPath(); ctx.arc(-6+k*6, 0, 1.6, 0, TAU); ctx.fill(); ctx.shadowBlur = 0; });
+  ctx.restore();
+}
+function drawFrame(ms){
+  const time = ms/1000, now = performance.now(), r = canvas.getBoundingClientRect(), dpr = devicePixelRatio||1;
+  if (canvas.width !== Math.round(r.width*dpr) || canvas.height !== Math.round(r.height*dpr)){canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr)}
+  const t = stepCamera(now);
+  ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,r.width,r.height);
+  drawGrid(r.width,r.height);
+  if (!data) return;
+  if (mode==="live" && [...layout.visible].some(id=>{const v=vis.get(id);return v && v.keep && v.keep < now && agentById(id)?.state!=="working"})) syncScene(data);
+  ctx.setTransform(dpr*camera.z,0,0,dpr*camera.z,dpr*(r.width/2-camera.x*camera.z),dpr*(r.height/2-camera.y*camera.z));
+  for (const v of [...vis.values(), ...noteVis.values()]){ v.x += (v.tx-v.x)*.1; v.y += (v.ty-v.y)*.1; v.alpha += ((v.shown?1:0)-v.alpha)*.12; if (v.flash) v.flash = Math.max(0, v.flash-.012); }
+  seenLinks = new Set();
+  drawLabels(); drawConnections(time); drawNotes(); drawTools(time);
+  for (const key of [...ignition.keys()]) if (!seenLinks.has(key)) ignition.delete(key);
+  for (const a of data.agents) if (a.id!==scene.target) drawModule(a, time, now);
+  const focus = agentById(scene.target); if (focus) drawModule(focus, time, now);
+  drawDatashard(time, now);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const g = ctx.createRadialGradient(r.width/2,r.height/2,Math.min(r.width,r.height)*.35,r.width/2,r.height/2,Math.max(r.width,r.height)*.75);
+  g.addColorStop(0,"rgba(0,0,0,0)"); g.addColorStop(1,"rgba(0,0,0,.55)"); ctx.fillStyle=g; ctx.fillRect(0,0,r.width,r.height);
+  drawEmpty(r.width, r.height);
+  placeAsks(r.width, r.height);
+  drawTransition(t, r.width, r.height);
+}
+
+/* ================= roster: who is off stage ================= */
+function rosterChip(a){
+  return `<button class="chip ${a.attention?"att":""}" data-id="${esc(a.id)}" style="--team:${a.kind==="stage"?teamColor(a.floor):"var(--red-dim)"};--st:${STATE_COLOR[a.state]||C.muted}"
+      title="${esc(a.role||a.slot)} · ${esc(a.floor)}"><i></i>${esc(a.name)} <small>${esc(STATE[a.state]||"OCIOSO")} · ${ago(a.lastActiveAt)}</small></button>`;
+}
+// The waiting list mirrors the live map: Lumen | Orquestrador (Vigia above, Integrador below) | Concierge | one column
+// per team with Prisma / Forja / Sentinela. Cells of modules on stage stay empty so nothing shifts.
+function renderRoster(d){
+  const off = d.agents.filter(a=>!layout.visible.has(a.id)), el = $("roster");
+  $("rosterTitle").textContent = mode==="live" ? `EM ESPERA // ${off.length} FORA DA CENA` : "EM ESPERA // TODOS EM CENA";
+  if (!off.length){ el.className = "roster";
+    el.innerHTML = `<div class="empty">${mode==="live"?"Todos os terminais estão em execução.":"No modo TODOS, todos os terminais aparecem no console."}</div>`; return; }
+  const teams = [...new Set(d.agents.filter(a=>liveSlot(a)==="T").map(a=>a.floor))].sort((p,q)=>floorOrder(p)-floorOrder(q)||p.localeCompare(q));
+  const at = {hub:[2,3], N:[2,2], S:[2,4], W:[1,3], E:[3,3]}, cells = new Map(), extras = [];
+  for (const a of off.sort((p,q)=>p.name.localeCompare(q.name))){
+    const s = liveSlot(a), rc = s==="T" ? [4+teams.indexOf(a.floor), 3+LIVE_ROW[a.slot]] : at[s];
+    if (!rc){ extras.push(a); continue; }
+    const k = rc.join(","); (cells.get(k) || cells.set(k, []).get(k)).push(a);
+  }
+  const used = [...cells.keys()].map(k=>+k.split(",")[0]);
+  const head = teams.map((f,i)=>used.includes(4+i) ? `<span class="rh" style="grid-column:${4+i};grid-row:1;color:${teamColor(f)}">${esc(teamName(f))}</span>` : "").join("");
+  el.className = "roster map";
+  el.innerHTML = head + [...cells].map(([k,list])=>{ const [c,r] = k.split(",");
+    return `<div class="rc" style="grid-column:${c};grid-row:${r}">${list.map(rosterChip).join("")}</div>`; }).join("")
+    + (extras.length ? `<div class="rx" style="grid-row:5;grid-column:1/span ${Math.max(3, ...used)}">${extras.map(rosterChip).join("")}</div>` : "");
+}
+$("roster").addEventListener("click", e=>{const b=e.target.closest(".chip"); if(!b) return; setMode("all"); requestAnimationFrame(()=>focusAgent(b.dataset.id));});
+
+/* ================= trace (timeline) ================= */
+const tcan = $("trace"), tctx = tcan.getContext("2d"), WINDOW = 15*60*1000;
+function drawTrace(){
+  if (data){ const want = `${Math.max(150, data.agents.length*14+30)}px`; if (tcan.parentElement.style.height !== want) tcan.parentElement.style.height = want; }
+  const r = tcan.getBoundingClientRect(), dpr = devicePixelRatio||1;
+  if (tcan.width!==Math.round(r.width*dpr)||tcan.height!==Math.round(r.height*dpr)){tcan.width=Math.round(r.width*dpr);tcan.height=Math.round(r.height*dpr)}
+  tctx.setTransform(dpr,0,0,dpr,0,0); tctx.clearRect(0,0,r.width,r.height);
+  if (!data) return;
+  const now = Date.now(), L = 120, W = r.width-L-14, t0 = now-WINDOW, X = t => L+Math.max(0,(t-t0)/WINDOW)*W;
+  const agents = [...data.agents].sort((a,b)=>(a.kind==="stage")-(b.kind==="stage")||a.floor.localeCompare(b.floor)||a.name.localeCompare(b.name));
+  const rowH = Math.max(6, Math.min(16, (r.height-24)/Math.max(1,agents.length)));
+  tctx.textBaseline="middle";
+  for (let m=0;m<=15;m+=5){const x=X(now-m*60000); tctx.fillStyle=rgba(C.red,.25); tctx.fillRect(x,4,1,r.height-22); tctx.font=MONO(); tctx.fillStyle=C.muted; tctx.textAlign="center"; tctx.fillText(m?`-${m}min`:"agora",Math.min(x,r.width-24),r.height-9)}
+  agents.forEach((a,i)=>{
+    const y = 4+i*rowH;
+    tctx.textAlign="left"; tctx.fillStyle = a.state==="working"?C.cyan:a.kind==="stage"?teamColor(a.floor):C.muted; tctx.font = MONO(rowH<11?9:11);
+    tctx.fillText(fit(tctx,a.name,L-14), 8, y+rowH/2);
+    tctx.fillStyle = rgba(C.red,.06); tctx.fillRect(L,y+1,W,rowH-2);
+    for (const seg of history.get(a.id)||[]){
+      const x0 = X(seg.from), x1 = X(seg.to||now); if (x1 <= L) continue;
+      if (seg.state!=="unknown"){ tctx.fillStyle = rgba(STATE_COLOR[seg.state]||C.muted, seg.state==="working"?.85:.35); tctx.fillRect(x0,y+2,Math.max(2,x1-x0),rowH-4); }
+      if (seg.attention){ tctx.fillStyle=C.yellow; tctx.fillRect(x0,y+rowH-3,Math.max(2,x1-x0),2); }
+    }
+    for (const k of toolTicks) if (k.agent===a.id && k.at>t0){ tctx.fillStyle=C.amber; tctx.fillRect(X(k.at)-1,y+1,2,rowH-2); }
+  });
+  tctx.fillStyle=C.yellow; tctx.fillRect(X(now)-1,2,2,r.height-20);
+}
+
+function loop(ms){ if (!document.hidden) drawFrame(ms); requestAnimationFrame(loop); }
+requestAnimationFrame(loop);
+setInterval(()=>{ if(!document.hidden) drawTrace(); }, 1000);
+addEventListener("resize", ()=>{ drawTrace(); if (scene.mode==="overview" && !tween) camera = overviewCamera(); });
+
+/* ================= theme picker ================= */
+(function(){
+  const menu = $("themeMenu"), btn = $("themeBtn");
+  menu.innerHTML = Object.entries(THEMES).map(([id,t])=>`<button class="theme-opt" role="menuitemradio" data-theme="${id}" aria-checked="false">
+    <span class="sw" style="background:${t.primary}"></span><span class="sw" style="background:${t.live}"></span><span class="sw" style="background:${t.accent}"></span>${esc(t.name)}</button>`).join("");
+  btn.onclick = ()=>{ const open = menu.hidden; menu.hidden = !open; btn.setAttribute("aria-expanded", open); };
+  menu.insertAdjacentHTML("beforeend", `<div class="menu-h">LIGAÇÕES</div>
+    ${[["circuit","CIRCUITO"],["cable","CABO"],["both","AMBOS"]].map(([v,l])=>`<button class="theme-opt" role="menuitemradio" data-links="${v}" aria-checked="false">${l}</button>`).join("")}`);
+  const syncPrefs = ()=>{ menu.querySelectorAll("[data-links]").forEach(b=>b.setAttribute("aria-checked", b.dataset.links===PREFS.links)); };
+  syncPrefs();
+  menu.addEventListener("click", e=>{ const b = e.target.closest(".theme-opt"); if (!b) return;
+    if (b.dataset.links){ PREFS.links = b.dataset.links; savePrefs(); syncPrefs(); return; }
+    applyTheme(b.dataset.theme); menu.hidden = true; btn.setAttribute("aria-expanded","false"); drawTrace(); });
+  addEventListener("click", e=>{ if (!menu.hidden && !e.target.closest(".theme")) { menu.hidden = true; btn.setAttribute("aria-expanded","false"); } });
+  let saved = null; try { saved = localStorage.getItem("fluxo-neon-theme"); } catch (_) {}
+  applyTheme(saved || "neon");
+})();
+
+/* ================= panels ================= */
+function render(d){
+  data = d;
+  $("ws").textContent = d.workspace || "—";
+  $("live").textContent = d.agents.filter(a=>a.state==="working").length;
+  $("att").textContent = d.attentionCount||0;
+  $("attBox").classList.toggle("alert", (d.attentionCount||0)>0);
+  const open = Object.entries(d.laneRuns||{}).filter(([,r])=>r.open);
+  $("run").textContent = open.length ? open.map(([f,r])=>`${f}: ${r.card}`).join(" · ") : d.activeRun ? `${d.activeRun.status} · ${String(d.activeRun.runId).slice(0,10)}` : "nenhuma";
+  const ground = (d.floors||[]).find(f=>f.active) || (d.floors||[])[0];
+  $("gtext").textContent = ground ? `${ground.name}: ${ground.status||"sem status"}` : "—";
+  $("gbar").style.width = ground && ground.progress!=null ? `${Math.round(ground.progress*100)}%` : "0";
+  syncScene(d);
+  renderAsks(d);
+  renderEvents(d.events||[]);
+  renderSide(d);
+  drawTrace();
+  if ($("drawer").classList.contains("open") && selected) openDrawer(selected, true);
+}
+
+function renderEvents(events){
+  const s = JSON.stringify(events.map(e=>e.at+e.text));
+  if (s===evSig) return; evSig = s;
+  $("evCount").textContent = `${events.length} eventos`;
+  const newest = events.length ? events[0].at : 0;
+  $("buffer").innerHTML = events.length ? events.map(e=>`<div class="ev ${e.at>lastEvent&&lastEvent?"fresh":""}" data-k="${esc(e.kind)}">
+      <time>${hhmm(e.at)}</time><div><span class="k">${KIND[e.kind]||esc(e.kind).toUpperCase()}</span>${esc(e.text)}</div></div>`).join("")
+    : '<div class="empty">Sem transições desde que o painel abriu. Eventos surgem quando estados mudam.</div>';
+  lastEvent = Math.max(lastEvent, newest);
+  $("ticker").textContent = events.slice(0,8).map(e=>`[${hhmm(e.at)}] ${e.text}`).join("   ///   ") || "sem transições recentes   ///   monitorando o Maestri Wire";
+}
+
+function renderSide(d){
+  const sh = d.shelves||{}, max = Math.max(6, ...Object.values(sh));
+  $("shelves").innerHTML = SHELVES.map(([k,label])=>{const n=sh[k]||0, on=Math.round(n/max*12);
+    return `<div class="seg"><span>${label}</span><div class="cells">${Array.from({length:12},(_,i)=>`<i class="${i<on?"on":""}"></i>`).join("")}</div><b>${n}</b></div>`}).join("");
+  $("boardNote").textContent = d.boardError ? "indisponível" : "Trello";
+  const names = Object.fromEntries(d.agents.map(a=>[a.id,a.name]));
+  $("routines").innerHTML = (d.routines||[]).length ? d.routines.map(r=>`<div class="rt"><b>${esc(r.name)}</b>
+    <span class="${r.enabled?"":"off"}">${r.enabled?"ativa":"pausada"} · ${esc(names[r.terminal]||"—")} · ${r.lastFiredAt?ago(r.lastFiredAt):"nunca"}</span></div>`).join("")
+    : '<div class="empty">Nenhuma rotina registrada.</div>';
+}
+
+function openDrawer(id, refresh){
+  const a = data && data.agents.find(x=>x.id===id); if (!a) return;
+  $("dName").textContent = a.name; $("drawer").dataset.agent = a.id;
+  const rows = [["Papel",a.role||"—"],["Equipe",a.floor],["Etapa",a.slot],["Estado",STATE[a.state]||a.state],["Atenção",a.attention?"sim":"não"],
+    ["Tarefa",a.task||"—"],["Coluna",a.column||"—"],["Ferramentas",(a.lastTools||[]).join(", ")||"—"],["Skills",(a.skills||[]).join(", ")||"—"],
+    ["Programa",a.agentType||"—"],["Última atividade",a.lastActiveAt?`${ago(a.lastActiveAt)} atrás`:"—"]];
+  $("dKv").innerHTML = rows.map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join("");
+  $("dTail").textContent = (a.tail||[]).join("\n") || "(preview vazio)";
+  if (!refresh) $("drawer").classList.add("open");
+}
+function closeDrawer(){$("drawer").classList.remove("open")}
+$("dClose").onclick = closeDrawer;
+addEventListener("keydown", e=>{if(e.key!=="Escape"||$("term").open)return; if($("drawer").classList.contains("open"))closeDrawer(); else if(scene.mode!=="overview")goOverview(); else if(isMax())setMax(false)});
+// Full screen: the stage takes the whole window and the camera re-frames to use it; clicking again restores it.
+const isMax = () => $("stage").classList.contains("max");
+function setMax(on){
+  $("stage").classList.toggle("max", on); document.body.classList.toggle("maxed", on);
+  $("maxBtn").setAttribute("aria-pressed", on); $("maxBtn").textContent = on ? "▣ SAIR DA TELA CHEIA" : "⛶ TELA CHEIA";
+  requestAnimationFrame(()=>{ if (scene.mode==="agent") focusAgent(scene.target);
+    else if (scene.mode==="overview") flyTo(overviewCamera(), on ? "TELA CHEIA" : "VISÃO NORMAL", mode==="live" ? liveSummary() : ""); });
+}
+$("maxBtn").addEventListener("click", ()=>setMax(!isMax()));
+setInterval(()=>{$("clock").textContent = new Date().toLocaleTimeString("pt-BR")}, 1000);
+
+function setLink(ok, text){$("dot").classList.toggle("on", ok);$("linkText").textContent = text}
+function toast(t){const el=$("toast");el.textContent=t;el.classList.toggle("show",!!t)}
+
+async function poll(){
+  try{
+    const r = await fetch("/api/flow", {cache:"no-store"});
+    const d = await r.json();
+    if (!r.ok || d.error) throw new Error(d.error || `HTTP ${r.status}`);
+    render(d); setLink(true, "WIRE ONLINE"); toast("");
+  }catch(err){
+    setLink(false, "WIRE OFFLINE"); toast(String(err.message||err).slice(0,160));
+  }finally{ setTimeout(poll, 2000); }
+}
+
+/* ---------- full terminal: read-only, the same Wire stream Orbita uses ---------- */
+let TERM = {x:null, es:null, timer:null, id:null};
+function loadXterm(){
+  if (window.Terminal) return Promise.resolve();
+  return new Promise((ok, no)=>{
+    const css = document.createElement("link"); css.rel = "stylesheet"; css.href = "vendor/xterm/xterm.css"; document.head.appendChild(css);
+    const s = document.createElement("script"); s.src = "vendor/xterm/xterm.js"; s.onload = ok; s.onerror = ()=>no(new Error("xterm.js")); document.head.appendChild(s);
+  });
+}
+function termStatus(text, on){ $("termStatus").textContent = text; $("termStatus").classList.toggle("on", !!on); }
+async function openTerminal(id){
+  const a = data && data.agents.find(x=>x.id===id); if (!a) return;
+  closeTerminal(); TERM.id = id;
+  $("termTitle").textContent = `TERMINAL // ${a.name.toUpperCase()}`; termStatus("Conectando ao terminal completo…");
+  $("termOut").replaceChildren(); $("termInput").value = termDrafts.get(id) || ""; termSync(); if (!$("term").open) $("term").showModal();
+  try { await loadXterm(); } catch (_) { termStatus("xterm.js não carregou: abra o console pelo servidor."); return; }
+  if (TERM.id !== id) return;
+  TERM.x = new Terminal({disableStdin:true, scrollback:10000, cursorBlink:false, fontFamily:"Cascadia Code, Consolas, monospace", fontSize:13, lineHeight:1.15,
+    theme:{background:"#05060a", foreground:"#d5dce7", cursor:C.cyan, selectionBackground:"#3ef2ff44"}});
+  TERM.x.open($("termOut"));
+  if (DEMO) return demoTerminal(a);
+  TERM.es = new EventSource("api/terminal-stream?terminalId=" + encodeURIComponent(id));
+  TERM.es.onmessage = e=>{
+    try {
+      const m = JSON.parse(e.data);
+      if (m.type==="geometry" && Number.isInteger(m.cols) && Number.isInteger(m.rows) && m.cols>0 && m.cols<=250 && m.rows>0 && m.rows<=120){
+        TERM.x.reset(); TERM.x.resize(m.cols, m.rows); termStatus(`Conectado · ${m.cols}×${m.rows}`, true);
+      } else if (m.type==="output") TERM.x.write(Uint8Array.from(atob(m.data), c=>c.charCodeAt(0)));
+      else if (m.type==="error"){ TERM.es.close(); termStatus(m.message); }
+    } catch (_) { TERM.es.close(); termStatus("Saída do terminal inválida. Feche e reabra."); }
+  };
+  TERM.es.onerror = ()=>{ if (TERM.es) TERM.es.close(); termStatus("Conexão com o terminal perdida. Feche e reabra."); };
+}
+function closeTerminal(){ if (TERM.es) TERM.es.close(); clearTimeout(TERM.timer); if (TERM.x) TERM.x.dispose(); TERM = {x:null, es:null, timer:null, id:null}; if (typeof termSync==="function") termSync(); }
+// Demo: a scripted session in the agent's voice, typed out like a live terminal.
+function demoTerminal(a){
+  const box = $("termOut"), cols = Math.max(60, Math.min(160, Math.floor((box.clientWidth-24)/7.9))), rows = Math.max(16, Math.floor((box.clientHeight-20)/15));
+  TERM.x.resize(cols, rows); termStatus(`Simulação · ${cols}×${rows}`, true);
+  const E = "\x1b[", c = (n,t)=>`${E}${n}m${t}${E}0m`, task = a.task || "9.1 Ajustar pipeline", tool = (a.lastTools||[])[0] || "exec_command";
+  const lines = [
+    c("38;5;51;1", `╭─ ${a.agentType||"codex"} `) + c("38;5;245", `· ${a.name} · ${a.role||a.slot} · ${a.floor}`),
+    c("38;5;51", "│ ") + c("38;5;245", "workdir ") + "~/projeto  " + c("38;5;245", "model ") + "default",
+    c("38;5;51", "╰─") + c("38;5;245", " pronto"), "",
+    c("38;5;213;1", "› ") + c("1", task), "",
+    c("38;5;220", "• ") + "Lendo o card e os critérios de aceite…",
+    c("38;5;220", "• ") + c("1", "Running ") + c("38;5;51", tool) + c("38;5;245", "  git status --short"),
+    c("38;5;245", "  └ ") + c("38;5;214", " M") + " src/pipeline.py",
+    c("38;5;245", "    ") + c("38;5;46", "??") + " tests/test_pipeline.py",
+    c("38;5;220", "• ") + c("1", "Edited ") + "src/pipeline.py " + c("38;5;46", "(+12") + " " + c("38;5;196", "-3)"),
+    c("38;5;245", "    41 ") + c("38;5;196", "-    retry = 1"),
+    c("38;5;245", "    41 ") + c("38;5;46", "+    retry = config.get(\"retry\", 3)"),
+    c("38;5;220", "• ") + c("1", "Running ") + c("38;5;51", "exec_command") + c("38;5;245", "  python -m pytest -q"),
+    c("38;5;245", "  └ ") + c("38;5;46", "........................") + "  24 passed in 1.84s",
+    c("38;5;220", "• ") + "Atualizando o documento da etapa…",
+    c("38;5;46;1", "✔ ") + "etapa registrada " + c("38;5;245", `· ${task}`), "",
+    c("38;5;213;1", "› ") + c("38;5;245", "aguardando próxima instrução"), "",
+  ];
+  if (a.attention && a.question){   // the agent is waiting for the operator: stop at the question
+    lines.splice(10, lines.length, "", ...String(a.question).split("\n").map((q,i)=>c("38;5;213;1", i ? "  " : "? ") + c("1", q)),
+      c("38;5;245", "  aguardando decisão do operador…"));
+  }
+  let li = 0, ci = 0;
+  const tick = ()=>{
+    if (a.attention && a.question && li >= lines.length) return;
+    if (!TERM.x) return;
+    const L = lines[li % lines.length];
+    if (!ci && li && li % lines.length === 0) TERM.x.write(c("38;5;240", "─".repeat(Math.min(cols-2, 72))) + "\r\n");
+    const step = L.length < 40 ? L.length : 6 + Math.floor(Math.random()*14);
+    TERM.x.write(L.slice(ci, ci + step)); ci += step;
+    if (ci >= L.length){ TERM.x.write("\r\n"); li++; ci = 0; TERM.timer = setTimeout(tick, a.attention && a.question ? 60 : L ? 160 + Math.random()*420 : 90); }
+    else TERM.timer = setTimeout(tick, 18);
+  };
+  tick();
+}
+// Sending: the text goes to the terminal as a prompt through Maestri Wire (POST api/prompt).
+const termDrafts = new Map();
+let termSending = false;
+function termSync(){ $("termSend").disabled = termSending || !TERM.id || !$("termInput").value.trim(); }
+$("termInput").addEventListener("input", ()=>{ if (TERM.id) termDrafts.set(TERM.id, $("termInput").value); termSync(); });
+$("termInput").addEventListener("keydown", e=>{ if (e.key==="Enter" && (e.ctrlKey||e.metaKey)){ e.preventDefault(); $("termForm").requestSubmit(); } });
+$("termForm").addEventListener("submit", async e=>{
+  e.preventDefault();
+  const id = TERM.id, text = $("termInput").value;
+  if (!id || termSending || !text.trim()) return;
+  termSending = true; termSync(); termStatus("Enviando…");
+  try {
+    if (DEMO) demoReply(text);
+    else {
+      const r = await fetch("api/prompt", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({terminalId:id, text})});
+      const j = await r.json().catch(()=>({}));
+      if (!r.ok || j.ok===false || j.error) throw new Error(j.error || `HTTP ${r.status}`);
+    }
+    termDrafts.delete(id);
+    if (TERM.id===id){ $("termInput").value = ""; termStatus("Enviado. Acompanhe a resposta no terminal.", true); }
+  } catch (err) {
+    if (TERM.id===id) termStatus(`Envio não confirmado: ${err.message}. Confira o terminal antes de repetir.`);
+  } finally { termSending = false; termSync(); }
+});
+// Demo: echo the instruction and a short scripted answer in the simulated terminal.
+function demoReply(text){
+  const E = "\x1b[", c = (n,t)=>`${E}${n}m${t}${E}0m`;
+  clearTimeout(TERM.timer); TERM.x.write("\r\n" + c("38;5;213;1", "› ") + c("1", text.replace(/\n/g, "\r\n  ")) + "\r\n");
+  const a = agentById(TERM.id);
+  if (a && a.attention){ a.attention = false; a.question = null; }
+  if (window.demoAnswer) window.demoAnswer(TERM.id);
+  const out = [c("38;5;220", "• ") + "Instrução recebida do operador.", c("38;5;220", "• ") + "Retomando a tarefa com a decisão informada…", c("38;5;46;1", "✔ ") + "seguindo"];
+  let i = 0; const next = ()=>{ if (!TERM.x || i >= out.length) return; TERM.x.write(out[i++] + "\r\n"); TERM.timer = setTimeout(next, 500); };
+  TERM.timer = setTimeout(next, 400);
+  if (data) renderAsks(data);
+}
+$("dTerm").onclick = ()=>{ const id = $("drawer").dataset.agent; if (id) openTerminal(id); };
+$("termClose").onclick = ()=>$("term").close();
+$("termExpand").onclick = ()=>{ const full = $("term").classList.toggle("full"); $("termExpand").setAttribute("aria-pressed", String(full)); };
+$("term").addEventListener("close", closeTerminal);
+/* ---------- messages when an agent needs the operator (decision) or failed ---------- */
+// The question comes from the optional `question` field of the agent or, failing that, from the
+// last lines of the terminal preview. Nothing is answered from here: the operator replies in Maestri.
+const ASKS = {seen:new Map(), hidden:new Map(), rendered:new Set(), baseTitle:document.title, audio:null};
+function askKind(a){ return a.attention ? "decision" : a.state==="failed" ? "fail" : null; }
+function askText(a){
+  if (a.question) return String(a.question);
+  const t = (a.tail||[]).map(s=>String(s).trim()).filter(Boolean);
+  return t.slice(-3).join("\n") || (a.attention ? "O agente sinalizou que precisa de uma decisão." : "O agente parou com falha.");
+}
+function askBeep(){
+  try {
+    const A = ASKS.audio ||= new (window.AudioContext||window.webkitAudioContext)();
+    [[880,0],[1320,.13]].forEach(([f,t])=>{ const o = A.createOscillator(), g = A.createGain(); o.type = "square"; o.frequency.value = f;
+      g.gain.setValueAtTime(.0001, A.currentTime+t); g.gain.exponentialRampToValueAtTime(.05, A.currentTime+t+.01); g.gain.exponentialRampToValueAtTime(.0001, A.currentTime+t+.11);
+      o.connect(g).connect(A.destination); o.start(A.currentTime+t); o.stop(A.currentTime+t+.12); });
+  } catch (_) {}
+}
+function askNotify(a, kind, text){
+  askBeep();
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  try {
+    const n = new Notification(kind==="fail" ? `Neon Flow · ${a.name} falhou` : `Neon Flow · ${a.name} precisa de você`,
+      {body:text.slice(0,180), tag:"neon-flow-"+a.id, renotify:true});
+    n.onclick = ()=>{ window.focus(); focusAgent(a.id); openDrawer(a.id); n.close(); };
+  } catch (_) {}
+}
+function renderAsks(d){
+  const now = Date.now(), live = new Map();
+  for (const a of d.agents){ const k = askKind(a); if (k) live.set(a.id, {a, kind:k}); }
+  for (const [id, it] of live){
+    const key = it.kind + "|" + id;
+    if (!ASKS.seen.has(key)){ ASKS.seen.set(key, now); if (data && ASKS.ready) askNotify(it.a, it.kind, askText(it.a)); }
+  }
+  for (const key of [...ASKS.seen.keys()]){ const [k, id] = key.split("|"); if (!live.has(id) || live.get(id).kind !== k){ ASKS.seen.delete(key); ASKS.hidden.delete(key); } }
+  ASKS.ready = true;
+  const list = [...live.values()].filter(it=>!ASKS.hidden.has(it.kind+"|"+it.a.id))
+    .sort((p,q)=>(p.kind==="decision"?0:1)-(q.kind==="decision"?0:1) || ASKS.seen.get(p.kind+"|"+p.a.id)-ASKS.seen.get(q.kind+"|"+q.a.id));
+  const shown = list.slice(0, 3), canAsk = "Notification" in window && Notification.permission === "default";
+  // Rebuild only when the cards change; otherwise just refresh the elapsed time (no flicker, no replayed entry animation).
+  const sig = shown.map(it=>it.kind+"|"+it.a.id+"|"+askText(it.a)+"|"+(it.a.task||"")).join("") + "|" + list.length + "|" + canAsk;
+  if (sig === ASKS.sig){
+    for (const el of $("asks").querySelectorAll(".ask")){ const t = el.querySelector(".ask-t"), since = ASKS.seen.get(el.dataset.kind+"|"+el.dataset.id); if (t && since) t.textContent = `há ${ago(since)}`; }
+  } else { ASKS.sig = sig;
+  $("asks").innerHTML = shown.map((it,i)=>{ const a = it.a, k = it.kind, since = ASKS.seen.get(k+"|"+a.id);
+    const where = [STAGE_LABEL[a.slot]||a.role||a.slot, a.kind==="stage" ? teamName(a.floor) : ""].filter(Boolean).join(" · ");
+    return `<div class="ask ${k==="fail"?"fail":""} ${ASKS.rendered.has(k+"|"+a.id) ? "" : "enter"}" data-id="${esc(a.id)}" data-kind="${k}" role="alert">
+      <div class="ask-h"><i class="blink"></i><b>${k==="fail" ? "FALHA // AGENTE PAROU" : "DECISÃO PENDENTE"}</b><span class="ask-t">há ${esc(ago(since))}</span></div>
+      <div class="ask-n">${esc(a.name.toUpperCase())} <small>${esc(where)}${a.task ? " · "+esc(a.task) : ""}</small></div>
+      <div class="ask-q">${esc(askText(a))}</div>
+      <div class="ask-a"><button data-act="reply">${k==="fail" ? "▶ TERMINAL" : "↳ RESPONDER"}</button><button data-act="focus">VER NO MAPA</button>${i===0 && canAsk ? `<button data-act="notify">🔔 AVISAR NA ÁREA DE TRABALHO</button>` : ""}<button class="quiet" data-act="hide">OCULTAR</button></div>
+    </div>`; }).join("") + (list.length > shown.length ? `<div class="ask-more">+${list.length-shown.length} aguardando</div>` : ""); ASKS.rendered = new Set(shown.map(it=>it.kind+"|"+it.a.id)); }
+  const n = [...live.values()].filter(it=>it.kind==="decision").length, f = live.size - n;
+  document.title = n || f ? `(${n||f}) ${n ? "⚠ decisão" : "✖ falha"} · ${ASKS.baseTitle}` : ASKS.baseTitle;
+}
+// Each card sits beside the module of the agent that asked and follows the camera (normal or full screen).
+// If the module is off screen, the card waits in the top-right corner.
+function placeAsks(w, h){
+  const els = $("asks").querySelectorAll(".ask"); if (!els.length) return;
+  const used = []; let corner = 40;
+  const blocks = [];   // screen rectangles of every module on stage (to keep cards from covering them)
+  for (const m of data.agents){ const mv = vis.get(m.id); if (!mv || mv.shown === false || mv.alpha < .3) continue;
+    const [mw, mh] = size(m), z = camera.z, cx = w/2 + (mv.x-camera.x)*z, cy = h/2 + (mv.y-camera.y)*z;
+    blocks.push({x0:cx-mw*z/2, x1:cx+mw*z/2, y0:cy-mh*z/2-18, y1:cy+mh*z/2}); }
+  for (const el of els){
+    const id = el.dataset.id, a = agentById(id), v = vis.get(id), cw = el.offsetWidth, ch = el.offsetHeight;
+    let x = null, y = 0, side = "";
+    if (a && v && v.shown !== false && v.alpha > .3){
+      const [mw, mh] = size(a), z = camera.z, sx = w/2 + (v.x-camera.x)*z, sy = h/2 + (v.y-camera.y)*z, hw = mw*z/2, hh = mh*z/2;
+      if (sx > -hw && sx < w+hw && sy > -hh && sy < h+hh){
+        // Try right, left, below and above the module; keep the first spot that covers no other module.
+        const top = Math.max(40, Math.min(h - ch - 30, sy - hh));
+        const clampX = px=>Math.max(8, Math.min(w-cw-8, px)), xs = [sx-cw/2, sx-hw, sx+hw-cw].map(clampX);
+        const spots = [[sx+hw+18, top, "r"], [sx-hw-18-cw, top, "l"], ...xs.map(px=>[px, sy+hh+14, "b"]), ...xs.map(px=>[px, sy-hh-14-ch, "t"])]
+          .filter(([px,py])=>px >= 8 && px+cw <= w-8 && py >= 40 && py+ch <= h-30);
+        // overlap with the modules on stage (the asking one included): pick the spot that covers the least
+        const cover = ([px,py])=>blocks.reduce((sum,b)=>sum + Math.max(0, Math.min(px+cw, b.x1+6)-Math.max(px, b.x0-6)) * Math.max(0, Math.min(py+ch, b.y1+6)-Math.max(py, b.y0-6)), 0);
+        const best = spots.map(sp=>[cover(sp), sp]).sort((p,q)=>p[0]-q[0])[0], pick = best && best[1];
+        if (pick){ [x, y, side] = pick; if (side==="b" || side==="t") side = ""; }
+      }
+    }
+    if (x === null){ x = w - cw - 10; y = corner; }
+    y = Math.max(40, Math.min(h - ch - 30, y));
+    for (const u of used) if (x < u.x+u.w && x+cw > u.x && y < u.y+u.h+8 && y+ch+8 > u.y) y = u.y + u.h + 8;
+    if (!side) corner = y + ch + 8;
+    used.push({x, y, w:cw, h:ch});
+    el.style.transform = `translate(${Math.round(x)}px,${Math.round(y)}px)`;
+    if (el.dataset.side !== side) el.dataset.side = side;
+  }
+}
+$("asks").addEventListener("click", e=>{
+  const b = e.target.closest("button[data-act]"), card = e.target.closest(".ask"); if (!b || !card) return;
+  const id = card.dataset.id, act = b.dataset.act;
+  if (act==="term" || act==="reply") openTerminal(id).then(()=>$("termInput").focus());
+  else if (act==="focus"){ lastManual = 0; focusAgent(id); openDrawer(id); }
+  else if (act==="hide"){ ASKS.hidden.set(card.dataset.kind+"|"+id, Date.now()); renderAsks(data); }
+  else if (act==="notify" && "Notification" in window) Notification.requestPermission().then(()=>data && renderAsks(data));
+});
+/* ---------- demo: simulated data, only in the browser ---------- */
+function demo(){
+  const now = ()=>Date.now();
+  const teams = ["Equipe Alfa","Equipe Beta","Equipe Gama"], colors = {analise:"#FF9500",implementacao:"#FF2D55",revisao:"#AF52DE"};
+  const ag = [
+    {id:"orq",name:"Orquestrador",role:"Orquestrador",kind:"control",slot:"orquestrador",manager:true,floor:"Térreo",agentType:"codex",color:"#007AFF"},
+    {id:"lum",name:"Lumen",role:"Consultor Hermes",kind:"control",slot:"consultor",floor:"Térreo",agentType:"custom",color:"#5AC8FA"},
+    {id:"vig",name:"Vigia",role:"",kind:"control",slot:"vigia",floor:"Térreo",agentType:"custom",color:"#FFCC00"},
+    {id:"con",name:"Concierge",role:"Triagem de Demandas",kind:"stage",slot:"triagem",floor:"Térreo",agentType:"codex",color:"#34C759"},
+    {id:"int",name:"Integrador",role:"",kind:"stage",slot:"integracao",floor:"Térreo",agentType:"custom",color:"#FF2D55"},
+  ];
+  teams.forEach((t,i)=>[["analise","Prisma","Análise"],["implementacao","Forja","Implementação"],["revisao","Sentinela","Revisão"]]
+    .forEach(([slot,n,role])=>ag.push({id:`${n}${i}`,name:`${n}-${i+1}`,role,kind:"stage",slot,floor:t,agentType:"codex",color:colors[slot]})));
+  ag.forEach(a=>Object.assign(a,{state:"unknown",attention:false,tools:[],lastTools:[],skills:[],task:null,tail:["$ aguardando instrução"],lastActiveAt:now()-3.6e6}));
+  const tools = ["mcp__trello__claim_prepared_card","exec_command","mcp__github__create_pull_request","apply_patch","mcp__trello__publish_stage_document","maestri"];
+  const events = [], shelves = {"a-triar":4,triados:3,andamento:2,revisao:1,revisado:2,concluido:9};
+  let tick = 0, links = [];
+  let asking = null;
+  window.demoAnswer = id=>{ if (asking && asking.a.id===id){ asking.a.attention = false; asking.a.question = null; asking.until = tick; } };
+  const QUESTIONS = ["O card pede remover o campo antigo, mas há relatórios que ainda o usam.\nRemovo agora ou mantenho compatível até a próxima série?",
+    "Os testes de integração precisam do banco de homologação.\nPosso usar a base de testes compartilhada?",
+    "A revisão encontrou duas abordagens válidas para o filtro.\nSigo com a mais simples (menos arquivos) ou a mais completa?",
+    "O PR depende de outra tarefa que ainda não foi integrada.\nAbro o PR em rascunho agora ou espero?"];
+  const ev = (kind,text)=>{events.unshift({at:now(),kind,text});events.length=Math.min(events.length,60)};
+  function step(){
+    tick++;
+    const a = ag[3 + Math.floor(Math.random()*(ag.length-3))];
+    const card = `9.${1+Math.floor(Math.random()*6)} Ajustar pipeline`;
+    if (a.state==="working"){ a.state = Math.random()<.85?"completed":"interrupted"; a.tools=[]; ev("state",`${a.name} ${a.state==="completed"?"concluiu o turno":"foi interrompido"}`);
+      a.tail=[...a.tail.slice(-4), a.state==="completed"?"✔ etapa registrada":"✖ turno interrompido"]; }
+    else { a.state="working"; a.task=card; a.tools=tools.slice(tick%4, tick%4+1+tick%3); a.lastTools=a.tools; a.lastActiveAt=now();
+      ev("state",`${a.name} começou a trabalhar · ${card}`); ev("tool",`${a.name} usa ${a.tools[0]}`);
+      a.tail=[...a.tail.slice(-4), `> ${card}`, `  executando ${a.tools[0]}…`]; }
+    ag.filter(x=>x.state==="working"&&x.kind==="stage"&&Math.random()<.4).forEach(x=>{x.tools=tools.slice((tick+x.name.length)%5,(tick+x.name.length)%5+1+tick%2);x.lastTools=x.tools});
+    ag[0].state = ag.some(x=>x.state==="working"&&x!==ag[0]) ? "working" : "unknown";
+    // Every ~30 s a working module stops and asks for a decision, holding it for ~15 s.
+    if (!asking && tick%12===4){ const pool = ag.filter(x=>x.kind==="stage" && x.state==="working" && x.slot!=="triagem");
+      if (pool.length){ const x = pool[Math.floor(Math.random()*pool.length)], q = QUESTIONS[tick % QUESTIONS.length];
+        asking = {a:x, until:tick+6}; x.attention = true; x.question = q; x.tail = [...x.tail.slice(-3), "? "+q.split("\n")[0]];
+        ev("attention",`${x.name} pede uma decisão: ${q.split("\n")[0]}`); } }
+    if (asking && tick >= asking.until){ asking.a.attention = false; asking.a.question = null; ev("state",`${asking.a.name} recebeu a decisão e seguiu`); asking = null; }
+    // Lumen consultation cycle (same signal as the real runtime): TEACH for 4 ticks, pause, LEARN for 4 ticks.
+    { const ph = tick%14, l = ag[1]; l.mode = ph<6 ? "teach" : "learn";
+      const st = (ph<4 || (ph>=7 && ph<11)) ? "working" : (ph===4 || ph===11) ? "completed" : "unknown";
+      if (st!==l.state){ if (st==="working") ev("lumen",`Lumen ${l.mode==="teach"?"orienta o Orquestrador (TEACH)":"aprende a correção (LEARN)"}`); l.state = st; l.lastActiveAt = now(); } }
+    links = tick%2===0 && a.state==="working" ? [{from:"orq",to:a.id,kind:"message"}] : [];
+    if (links.length) ev("message",`Orquestrador → ${a.name}: troca de mensagens`);
+    if (tick%5===0){ const k = SHELVES[Math.floor(Math.random()*5)][0]; if (shelves[k]>0){shelves[k]--; shelves[SHELVES[SHELVES.findIndex(s=>s[0]===k)+1][0]]++; ev("card",`Card “${card}” avançou no quadro`);} }
+    render({workspace:"demo", floors:[{name:"Térreo",active:true,attention:0,status:`Simulação: ${card}`,state:"working",progress:(tick%10)/10},
+      ...teams.map(t=>({name:t,active:false,status:"faixa pronta",progress:null}))],
+      stages:[{id:"triagem",label:"Triagem"},{id:"analise",label:"Análise"},{id:"implementacao",label:"Implementação"},{id:"revisao",label:"Revisão"},{id:"integracao",label:"Integração"}],
+      agents:ag.map(x=>({...x,tools:[...x.tools]})), links, events:[...events],
+      // Same topology as the real canvas: the Orquestrador is wired to every terminal and to the operation notes.
+      connections:[...ag.slice(1).map(x=>({id:"demo-c-"+x.id, kind:x.floor==="Térreo"?"terminal":"crossFloor", from:"orq", to:x.id,
+          active:links.some(l=>l.to===x.id)})),
+        ...["n1","n2"].map(n=>({id:"demo-"+n, kind:"note", from:"orq", to:null, note:n, active:tick%7===0}))],
+      notes:[{id:"n1",kind:"noteStack",title:"Histórico — Operação",subtitle:"Fila 9.x — Orquestrador",terminals:["orq"]},
+        {id:"n2",kind:"note",title:"Painel — Operação",subtitle:"",lastModifiedAt:new Date(now()-6e5).toISOString(),terminals:["orq"]}],
+      laneRuns:Object.fromEntries(teams.map((t,i)=>[t.replace("Equipe ",""),{runId:`demo-${i}`,card:`9.${i+1} Ajustar pipeline`,status:["active","reviewing","reviewed"][i],
+        open:i<2,stages:i===2?[{role:"implementation",outcome:"ready"},{role:"review",outcome:"approved"}]:[{role:"implementation",outcome:"ready"}],pr:i>0,updatedAt:new Date(now()-9e5).toISOString()}])),
+      routines:[{name:"Triagem",terminal:"orq",enabled:true,every:300,lastFiredAt:now()-45e3},{name:"Implementação",terminal:"orq",enabled:false,every:2400,lastFiredAt:0}],
+      shelves:{...shelves}, attentionCount:ag.filter(x=>x.attention).length, activeRun:{status:"active",runId:"demo-run-0001"}, updatedAt:now()});
+    setLink(true,"SIMULAÇÃO");
+  }
+  step(); setInterval(step, 2500);
+}
+DEMO ? demo() : poll();
+</script>
+</body>
+</html>
