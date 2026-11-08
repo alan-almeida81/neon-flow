@@ -90,5 +90,55 @@ class BuildFlowTests(unittest.TestCase):
         self.assertEqual(next(a for a in flow['agents'] if a['id'] == 's')['color'], '')
 
 
+class PendingTriageTests(unittest.TestCase):
+    LISTS = [{'id': 'la', 'name': 'A analisar'}, {'id': 'lf', 'name': 'A fazer'}]
+
+    def flow(self, cards):
+        return build_flow({'items': [terminal('c', 'Concierge', 'Triagem de Demandas Tooling')]}, {},
+                          {'lists': self.LISTS, 'cards': cards}, {})
+
+    def test_pending_card_asks_the_operator_with_reason_and_evidence(self):
+        triage = {'result': 'PENDENTE_SEM_IA', 'reason': 'CRITERIO_AUSENTE', 'evidence': 'Falta a cobertura.',
+                  'pending': 'Declare a cobertura.', 'at': '2026-11-08T22:35:18Z'}
+        flow = self.flow([
+            {'id': '1', 'name': '9.1 Espera', 'listId': 'la', 'labels': [{'name': 'revisada'}], 'triage': triage},
+            {'id': '2', 'name': '9.2 Liberado', 'listId': 'lf', 'labels': [{'name': 'revisada'}, {'name': 'ia'}]},
+            {'id': '3', 'name': '9.3 Sem triagem', 'listId': 'la', 'labels': []},
+            {'id': '4', 'name': '9.4 Respondido', 'listId': 'la', 'labels': [{'name': 'revisada'}],
+             'triage': {**triage, 'result': 'REAVALIAR'}},
+        ])
+        self.assertEqual([(p['card'], p['kind']) for p in flow['pendingTriage']], [('9.1 Espera', 'decision')])
+        c = next(a for a in flow['agents'] if a['id'] == 'c')
+        self.assertEqual((c['questionKind'], c['task']), ('decision', '9.1'))
+        for text in ('9.1 Espera (triagem às', 'aguarda sua decisão', 'Motivo: CRITERIO_AUSENTE',
+                     'Evidência: Falta a cobertura.', 'Pendência: Declare a cobertura.'):
+            self.assertIn(text, c['question'])
+
+    def test_any_card_the_triage_did_not_move_is_a_failure(self):
+        cards = [
+            {'id': '1', 'name': '8.1 Eleg', 'listId': 'la', 'labels': [{'name': 'revisada'}, {'name': 'ia'}],
+             'triage': {'result': 'ELEGIVEL'}},
+            {'id': '2', 'name': '8.2 Sem comentario', 'listId': 'la', 'labels': [{'name': 'revisada'}]},
+            {'id': '3', 'name': '8.3 Sem revisada', 'listId': 'la', 'labels': [], 'triage': {'result': 'PENDENTE_SEM_IA'}},
+            {'id': '4', 'name': '8.4 Pendente', 'listId': 'la', 'labels': [{'name': 'revisada'}],
+             'triage': {'result': 'PENDENTE_SEM_IA'}},
+        ]
+        flow = self.flow(cards)
+        kinds = {p['card']: (p['kind'], p['how']) for p in flow['pendingTriage']}
+        self.assertEqual(kinds['8.1 Eleg'], ('fail', 'A triagem liberou o card, mas ele não foi movido para A fazer.'))
+        self.assertIn('sem comentário de triagem', kinds['8.2 Sem comentario'][1])
+        self.assertIn('revisada: não', kinds['8.3 Sem revisada'][1])
+        self.assertEqual(kinds['8.4 Pendente'][0], 'decision')
+        self.assertEqual(flow['pendingTriage'][-1]['kind'], 'decision')   # failures first
+        c = next(a for a in flow['agents'] if a['id'] == 'c')
+        self.assertEqual((c['questionKind'], c['questionTitle']), ('fail', 'TRIAGEM NÃO MOVEU O CARD'))
+        self.assertIn('+2 card(s) também parados na triagem.', c['question'])
+
+    def test_no_pending_card_means_no_question(self):
+        flow = build_flow({'items': [terminal('c', 'Concierge', 'Triagem')]}, {}, {}, {})
+        self.assertEqual(flow['pendingTriage'], [])
+        self.assertNotIn('question', flow['agents'][0])
+
+
 if __name__ == '__main__':
     unittest.main()

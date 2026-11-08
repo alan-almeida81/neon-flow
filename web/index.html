@@ -186,7 +186,7 @@ footer .run{white-space:nowrap;animation:tick 60s linear infinite;padding-left:1
 .ask-t{color:var(--muted);letter-spacing:.06em}
 .ask-n{margin:5px 0 4px;font-family:var(--head);font-weight:700;font-size:17px;letter-spacing:.06em;color:var(--text)}
 .ask-n small{font-family:var(--mono);font-weight:400;font-size:11px;color:var(--muted);letter-spacing:.04em}
-.ask-q{font-size:12px;line-height:1.45;color:var(--text);white-space:pre-wrap;word-break:break-word;max-height:5.8em;overflow:hidden;border-left:2px solid color-mix(in srgb,var(--yellow) 45%,transparent);padding-left:8px}
+.ask-q{font-size:12px;line-height:1.45;color:var(--text);white-space:pre-wrap;word-break:break-word;max-height:16em;overflow:auto;border-left:2px solid color-mix(in srgb,var(--yellow) 45%,transparent);padding-left:8px}
 .ask.fail .ask-q{border-left-color:color-mix(in srgb,var(--fail) 45%,transparent)}
 .ask-a{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .ask-a button{background:transparent;border:1px solid var(--cyan);color:var(--cyan);font-family:var(--mono);font-size:10px;letter-spacing:.14em;padding:4px 7px;cursor:pointer}
@@ -331,6 +331,14 @@ function teamName(floor){return String(floor||"").replace(/^Equipe\s+/i,"").toUp
 function teamColor(floor){const t=TEAM.find(([re])=>re.test(floor||""));return t?t[1]:C.red}
 // Terminal colours come from the Maestri canvas; red hues are reserved for failures, so they render as neon pink.
 // "claude-opus-5-5" -> "OPUS 5.5", "gpt-6-luna" -> "GPT-6-LUNA"
+// Program label, from Maestri's own agent types (claude_code, codex, gemini_cli, antigravity_cli, open_code,
+// custom, generic_shell). A plain shell, or a "custom" terminal with no role and no model (a script loop such as
+// Integrador or Vigia), is a terminal, not an agent.
+const PROG = {claude_code:"CLAUDE", claudecode:"CLAUDE", codex:"CODEX", gemini_cli:"GEMINI", geminicli:"GEMINI",
+  antigravity_cli:"AGY", antigravitycli:"AGY", open_code:"OPENCODE", opencode:"OPENCODE", custom:"CUSTOM"};
+function isShell(a){ const t = String(a.agentType||"").toLowerCase();
+  return t==="generic_shell" || t==="genericshell" || t==="shell" || (t==="custom" && !a.role && !a.model); }
+function progLabel(a){ if (isShell(a)) return "TERMINAL"; const t = String(a.agentType||"").toLowerCase(); return PROG[t] || (t ? t.toUpperCase() : "?"); }
 function modelLabel(m){
   if (!m) return "";
   const s = String(m).replace(/^claude-/i, "").replace(/\[.*\]$/, "").replace(/-\d{8}$/, "");
@@ -1407,7 +1415,7 @@ function drawModule(a, time, now){
   ctx.fillStyle = mc; ctx.beginPath(); ctx.moveTo(x+10,y-9); ctx.lineTo(x+10+tabW,y-9); ctx.lineTo(x+18+tabW,y+1); ctx.lineTo(x+10,y+1); ctx.closePath(); ctx.fill();
   ctx.fillStyle="#0a0a12"; ctx.textAlign="left"; ctx.textBaseline="middle"; ctx.fillText(fit(ctx,a.name.toUpperCase(),tabW-12), x+17, y-4);
   ctx.font=MONO(9); ctx.fillStyle=rgba(tc,.85); ctx.textAlign="right";
-  const prog = (a.agentType||"?").toUpperCase().replace("CLAUDE_CODE","CLAUDE").replace("OPEN_CODE","OPENCODE");
+  const prog = progLabel(a);
   ctx.fillText(fit(ctx, [prog, modelLabel(a.model), ago(a.lastActiveAt)].filter(Boolean).join(" · "), w-56), x+w-10, y+11);
   const rr = ctrl ? 15 : 19, rx = x+14+rr, ry = y+h/2+(ctrl?3:2);
   drawGauge(a, rx, ry, rr, sc, live, time, ctrl, chief);
@@ -1761,7 +1769,7 @@ function openDrawer(id, refresh){
   $("dName").textContent = a.name; $("drawer").dataset.agent = a.id;
   const rows = [["Papel",a.role||"—"],["Equipe",a.floor],["Etapa",a.slot],["Estado",STATE[a.state]||a.state],["Atenção",a.attention?"sim":"não"],
     ["Tarefa",a.task||"—"],["Coluna",a.column||"—"],["Ferramentas",(a.lastTools||[]).join(", ")||"—"],["Skills",(a.skills||[]).join(", ")||"—"],
-    ["Programa",a.agentType||"—"],["Modelo",a.model||"—"],["Última atividade",a.lastActiveAt?`${ago(a.lastActiveAt)} atrás`:"—"]];
+    ["Programa",isShell(a)?"terminal":(a.agentType||"—")],["Modelo",a.model||"—"],["Última atividade",a.lastActiveAt?`${ago(a.lastActiveAt)} atrás`:"—"]];
   $("dKv").innerHTML = rows.map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join("");
   $("dTail").textContent = (a.tail||[]).join("\n") || "(preview vazio)";
   if (!refresh) $("drawer").classList.add("open");
@@ -1924,7 +1932,7 @@ function needsHelp(a){
   if (!a.attention || a.state==="working") return false;
   return askLines(a).some(s=>ASK_LINE.test(s.trim()));
 }
-function askKind(a){ return needsHelp(a) ? "decision" : null; }   // failures go to the log only
+function askKind(a){ return a.question && a.questionKind==="fail" ? "fail" : needsHelp(a) ? "decision" : null; }   // agent failures go to the log; the backend flags real stops (e.g. triage that did not move a card)
 function askText(a){
   if (a.question) return String(a.question);
   const t = askLines(a), hit = t.map(s=>ASK_LINE.test(s.trim())), first = hit.indexOf(true), last = hit.lastIndexOf(true);
@@ -1986,7 +1994,7 @@ function renderAsks(d){
   $("asks").innerHTML = shown.map((it,i)=>{ const a = it.a, k = it.kind, since = ASKS.seen.get(k+"|"+a.id);
     const where = [STAGE_LABEL[a.slot]||a.role||a.slot, a.kind==="stage" ? teamName(a.floor) : ""].filter(Boolean).join(" · ");
     return `<div class="ask ${k==="fail"?"fail":""} ${ASKS.rendered.has(k+"|"+a.id) ? "" : "enter"}" data-id="${esc(a.id)}" data-kind="${k}" role="alert">
-      <div class="ask-h"><i class="blink"></i><b>${k==="fail" ? "FALHA // AGENTE PAROU" : "DECISÃO PENDENTE"}</b><span class="ask-t">há ${esc(ago(since))}</span></div>
+      <div class="ask-h"><i class="blink"></i><b>${esc(a.questionTitle || (k==="fail" ? "FALHA // AGENTE PAROU" : "DECISÃO PENDENTE"))}</b><span class="ask-t">há ${esc(ago(since))}</span></div>
       <div class="ask-n">${esc(a.name.toUpperCase())} <small>${esc(where)}${a.task ? " · "+esc(a.task) : ""}</small></div>
       <div class="ask-q">${esc(askText(a))}</div>
       <div class="ask-a"><button data-act="reply">${k==="fail" ? "▶ TERMINAL" : "↳ RESPONDER"}</button><button data-act="focus">VER NO MAPA</button>${i===0 && canAsk ? `<button data-act="notify">🔔 AVISAR NA ÁREA DE TRABALHO</button>` : ""}<button class="quiet" data-act="hide">OCULTAR</button></div>

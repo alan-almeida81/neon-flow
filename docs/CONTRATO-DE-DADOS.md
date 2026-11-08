@@ -16,6 +16,8 @@ A página (`web/index.html`) lê `GET /api/flow` a cada poucos segundos. O termi
     "state": "working | completed | interrupted | failed | unknown",
     "attention": false,                 // pedindo decisão ao usuário: abre o cartão de decisão
     "question": null,                   // opcional: texto da pergunta; sem ele, o cartão usa a cauda
+    "questionKind": "decision",         // opcional: "decision" | "fail" (cartão de falha)
+    "questionTitle": null,              // opcional: título do cartão (ex.: "TRIAGEM NÃO MOVEU O CARD")
     "task": "9.1 Ajustar pipeline", "tools": ["apply_patch"], "lastTools": [], "skills": [], "model": "claude-opus-5-5", "mode": null,
     "color": "#FF9500", "lastActiveAt": 1731000000000, "tail": ["últimas linhas do terminal"]
   }],
@@ -24,6 +26,7 @@ A página (`web/index.html`) lê `GET /api/flow` a cada poucos segundos. O termi
   "links": [{"from": "a", "to": "b", "kind": "message"}],
   "events": [{"at": 1731000000000, "kind": "state|attention|tool|machine|message|note|routine|card", "text": "...", "actors": ["id"]}],
   "routines": [{"name": "Triagem", "terminal": "id", "enabled": false, "lastFiredAt": 0, "every": 1200}],
+  "pendingTriage": [{"kind": "decision|fail", "card": "9.1 ...", "url": "", "how": "o que aconteceu", "result": "PENDENTE_SEM_IA", "reason": "CRITERIO_AUSENTE", "evidence": "", "pending": "", "at": "ISO-8601"}],
   "laneRuns": {"Alfa": {"runId": "...", "card": "...", "status": "active", "open": true, "stages": [], "pr": false}},
   "shelves": {"a-triar": 0, "triados": 0, "andamento": 0, "revisao": 0, "revisado": 0, "concluido": 0},
   "columns": [{"name": "A fazer", "count": 3}],
@@ -41,5 +44,5 @@ Só `agents`, `connections`, `notes` e `stages` são essenciais. Os demais podem
 |---|---|---|
 | `snapshot` | feed do Maestri Wire (`/api/workspaces/{id}/feed`) ou `--snapshot` | `workspace.name/floors/attentionCount`, `items[].terminal` (`id, name, roleName, floorName, isActive, isManager, needsAttention, agentType, color, preview, lastActiveAt, status`), `items[].note`, `canvas.nodes`, `canvas.connections` (`fromNodeId, toNodeId, isActive, kind`) |
 | `runtime` | `--runtime` (opcional) | `agents[]` por `roleName`: `status, activeTools, recentTools, lastTool, skills, model, cardId, taskCode, mode, updatedAt`; `lumen`; `routines.items` (lido de `~/.maestri/routines.json` se ausente) |
-| `board` | `--board` (opcional) | `lists[]`, `cards[]` (`id, name, listId, labels`), `history.runs[]` (`runId, cardId, status, lane, stages, pr`), `activeRun` |
+| `board` | `--board` (opcional) | `lists[]`, `cards[]` (`id, name, listId, labels`, `triage` opcional: `result, reason, evidence, pending, at`; `result` = `REAVALIAR` quando a descrição mudou depois da triagem), `history.runs[]` (`runId, cardId, status, lane, stages, pr`), `activeRun` |
 | `memory` | dicionário mantido pelo servidor | guarda o estado anterior para transformar mudanças em eventos |

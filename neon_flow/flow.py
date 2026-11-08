@@ -4,6 +4,7 @@ Reuses the Pixel Office projection (states, links, transition events) and adds t
 each agent, its team floor and a sanitized terminal tail. Never sends input to Maestri.
 """
 import re
+from datetime import datetime
 
 from .office import build_office
 
@@ -91,6 +92,60 @@ def lane_runs(board: dict) -> dict:
     return result
 
 
+def pending_triage(board: dict) -> list:
+    """Cards the triage touched but left in "A analisar" (agents/porteiro-loop.md).
+
+    `decision`: PENDENTE_SEM_IA done right (revisada, no ia) — the operator must answer.
+    `fail`: anything else the Concierge left half-way — released but not moved, labels that contradict
+    the result, or `revisada` with no triage comment. A description edited after the triage means the
+    operator already answered (`reavaliar`) and raises nothing."""
+    lists = {l["id"]: l["name"].casefold() for l in board.get("lists", [])}
+    out = []
+    for card in board.get("cards", []):
+        if lists.get(card.get("listId")) != "a analisar":
+            continue
+        labels = {str(l.get("name", "")).casefold() for l in card.get("labels", [])}
+        triage = card.get("triage") or {}
+        result = str(triage.get("result", "")).upper()
+        if result == "REAVALIAR" or not (triage or "revisada" in labels or "ia" in labels):
+            continue
+        if result == "PENDENTE_SEM_IA" and "revisada" in labels and "ia" not in labels:
+            kind, how = "decision", "A triagem não liberou o card e aguarda sua decisão."
+        elif result.startswith("ELEGIVEL") or ("ia" in labels and result != "PENDENTE_SEM_IA"):
+            kind, how = "fail", "A triagem liberou o card, mas ele não foi movido para A fazer."
+        elif result == "PENDENTE_SEM_IA":
+            kind, how = "fail", ("A triagem deixou o card pendente, mas as etiquetas não conferem "
+                                 f"(revisada: {'sim' if 'revisada' in labels else 'não'}, ia: {'sim' if 'ia' in labels else 'não'}).")
+        elif not triage:
+            kind, how = "fail", "O card foi marcado como revisado sem comentário de triagem e não foi movido."
+        else:
+            kind, how = "fail", f"A triagem registrou um resultado inesperado ({result or 'vazio'}) e não moveu o card."
+        out.append({"kind": kind, "card": card.get("name", ""), "url": card.get("url", ""), "how": how,
+                    "result": result, "reason": triage.get("reason", ""), "evidence": triage.get("evidence", ""),
+                    "pending": triage.get("pending", ""), "at": triage.get("at", "")})
+    return sorted(out, key=lambda p: p["kind"] != "fail")   # failures first
+
+
+def triage_question(items: list) -> str:
+    """Operator-facing text: which card, how it ended, why, and what is missing."""
+    blocks = []
+    for p in items[:2]:
+        when = ""
+        if p["at"]:
+            try:
+                when = f" (triagem às {datetime.fromisoformat(p['at'].replace('Z', '+00:00')).astimezone():%H:%M})"
+            except ValueError:
+                pass
+        blocks.append("\n".join(filter(None, [
+            f"{p['card']}{when}", p["how"],
+            f"Motivo: {p['reason']}" if p["reason"] else "",
+            f"Evidência: {p['evidence']}" if p["evidence"] else "",
+            f"Pendência: {p['pending']}" if p["pending"] else ""])))
+    if len(items) > 2:
+        blocks.append(f"+{len(items) - 2} card(s) também parados na triagem.")
+    return "\n\n".join(blocks)
+
+
 def build_flow(snapshot: dict, runtime: dict, board: dict, memory: dict) -> dict:
     office = build_office(snapshot, runtime, board, memory)
     terminals = {item["terminal"]["id"]: item["terminal"]
@@ -104,6 +159,14 @@ def build_flow(snapshot: dict, runtime: dict, board: dict, memory: dict) -> dict
                        "color": terminal.get("color") or "", "roleColor": terminal.get("roleColor") or "",
                        "maestriStatus": terminal.get("status", ""),
                        "tail": tail(terminal.get("preview"))})
+    waiting = pending_triage(board)
+    triage = next((a for a in agents if a["slot"] == "triagem"), None)
+    if waiting and triage:   # stays up until the card moves, even after the Concierge's turn ended
+        fail = waiting[0]["kind"] == "fail"
+        triage["question"] = triage_question(waiting)
+        triage["questionKind"] = "fail" if fail else "decision"
+        triage["questionTitle"] = "TRIAGEM NÃO MOVEU O CARD" if fail else "DECISÃO PENDENTE NA TRIAGEM"
+        triage["task"] = triage.get("task") or waiting[0]["card"].split(" ")[0]
     connections, notes = canvas_links(snapshot, terminals)
     runs = lane_runs(board)
     workspace = snapshot.get("workspace", {})
@@ -117,7 +180,7 @@ def build_flow(snapshot: dict, runtime: dict, board: dict, memory: dict) -> dict
         "workspace": workspace.get("name", ""), "floors": floors,
         "stages": [{"id": s, "label": label} for s, label, _ in STAGES],
         "agents": agents, "links": office["links"], "connections": connections, "notes": notes,
-        "laneRuns": runs, "events": office["events"],
+        "laneRuns": runs, "events": office["events"], "pendingTriage": waiting,
         "routines": office["routines"], "shelves": office["shelves"],
         "columns": office["columns"], "attentionCount": office["attentionCount"],
         "activeRun": board.get("activeRun"), "boardError": board.get("error"),
