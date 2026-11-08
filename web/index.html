@@ -363,7 +363,7 @@ function routinesOf(a){return (data.routines||[]).filter(r=>r.terminal===a.id)}
 // Live mode keeps only agents executing now, plus a short linger so the completion is visible.
 function liveSet(d, now){
   const ids = new Set();
-  for (const a of d.agents){ const v = vis.get(a.id); if (a.state==="working" || a.state==="failed" || a.attention || (v && v.keep > now)) ids.add(a.id); }
+  for (const a of d.agents){ const v = vis.get(a.id); if (a.state==="working" || a.state==="failed" || needsHelp(a) || (v && v.keep > now)) ids.add(a.id); }   // plain end-of-turn attention lingers LINGER ms, then leaves
   for (const c of d.connections||[]) if (c.active){ if (c.from) ids.add(c.from); if (c.to) ids.add(c.to); }
   return ids;
 }
