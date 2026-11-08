@@ -116,7 +116,7 @@ def build_office(snapshot: dict, runtime: dict, board: dict, memory: dict) -> di
             "task": task,
             "column": lists.get(card.get("listId")) if task else None,
             "tools": tools if state == "working" else [], "lastTools": tools,
-            "skills": record.get("skills", []),
+            "skills": record.get("skills", []), "model": (record.get("models") or {}).get(terminal.get("agentType")) or record.get("model"),
             "lastActiveAt": int(max(_ts(terminal.get("lastActiveAt")),
                                     _ts(record.get("updatedAt") or 0)) * 1000),
         }

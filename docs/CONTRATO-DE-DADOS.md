@@ -16,7 +16,7 @@ A página (`web/index.html`) lê `GET /api/flow` a cada poucos segundos. O termi
     "state": "working | completed | interrupted | failed | unknown",
     "attention": false,                 // pedindo decisão ao usuário: abre o cartão de decisão
     "question": null,                   // opcional: texto da pergunta; sem ele, o cartão usa a cauda
-    "task": "9.1 Ajustar pipeline", "tools": ["apply_patch"], "lastTools": [], "skills": [], "mode": null,
+    "task": "9.1 Ajustar pipeline", "tools": ["apply_patch"], "lastTools": [], "skills": [], "model": "claude-opus-5-5", "mode": null,
     "color": "#FF9500", "lastActiveAt": 1731000000000, "tail": ["últimas linhas do terminal"]
   }],
   "connections": [{"id": "c1", "kind": "crossFloor|note|...", "active": true, "from": "terminal-id", "to": "terminal-id", "note": null}],
@@ -40,6 +40,6 @@ Só `agents`, `connections`, `notes` e `stages` são essenciais. Os demais podem
 | Entrada | Origem | Campos usados |
 |---|---|---|
 | `snapshot` | feed do Maestri Wire (`/api/workspaces/{id}/feed`) ou `--snapshot` | `workspace.name/floors/attentionCount`, `items[].terminal` (`id, name, roleName, floorName, isActive, isManager, needsAttention, agentType, color, preview, lastActiveAt, status`), `items[].note`, `canvas.nodes`, `canvas.connections` (`fromNodeId, toNodeId, isActive, kind`) |
-| `runtime` | `--runtime` (opcional) | `agents[]` por `roleName`: `status, activeTools, recentTools, lastTool, skills, cardId, taskCode, mode, updatedAt`; `lumen`; `routines.items` (lido de `~/.maestri/routines.json` se ausente) |
+| `runtime` | `--runtime` (opcional) | `agents[]` por `roleName`: `status, activeTools, recentTools, lastTool, skills, model, cardId, taskCode, mode, updatedAt`; `lumen`; `routines.items` (lido de `~/.maestri/routines.json` se ausente) |
 | `board` | `--board` (opcional) | `lists[]`, `cards[]` (`id, name, listId, labels`), `history.runs[]` (`runId, cardId, status, lane, stages, pr`), `activeRun` |
 | `memory` | dicionário mantido pelo servidor | guarda o estado anterior para transformar mudanças em eventos |

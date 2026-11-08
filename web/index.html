@@ -330,11 +330,19 @@ function floorOrder(name){return /t[ée]rreo/i.test(name)?0:1}
 function teamName(floor){return String(floor||"").replace(/^Equipe\s+/i,"").toUpperCase()}
 function teamColor(floor){const t=TEAM.find(([re])=>re.test(floor||""));return t?t[1]:C.red}
 // Terminal colours come from the Maestri canvas; red hues are reserved for failures, so they render as neon pink.
+// "claude-opus-5-5" -> "OPUS 5.5", "gpt-6-luna" -> "GPT-6-LUNA"
+function modelLabel(m){
+  if (!m) return "";
+  const s = String(m).replace(/^claude-/i, "").replace(/\[.*\]$/, "").replace(/-\d{8}$/, "");
+  const c = s.match(/^([a-z]+)-(\d+)-(\d+)$/i);
+  return (c ? `${c[1]} ${c[2]}.${c[3]}` : s).toUpperCase();
+}
 function hex6(v,fallback){
   if (!/^#[0-9a-f]{6}/i.test(v||"")) return fallback;
   const n=parseInt(v.slice(1,7),16), r=(n>>16&255)/255, g=(n>>8&255)/255, b=(n&255)/255, mx=Math.max(r,g,b), d=mx-Math.min(r,g,b);
   if (d<.25 || mx!==r) return v.slice(0,7);
-  const hue = (((g-b)/d)%6+6)%6*60; return hue<20 || hue>340 ? "#ff3ec8" : v.slice(0,7);
+  // red means failure: pink-reds become magenta, pure reds violet, so e.g. Integrador and Sentinela stay apart
+  const hue = (((g-b)/d)%6+6)%6*60; return hue>340 ? "#ff3ec8" : hue<20 ? "#9d7bff" : v.slice(0,7);
 }
 function rgba(hex,a){const n=parseInt(hex.slice(1,7),16);return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`}
 function fit(c,text,w){text=String(text??"");if(c.measureText(text).width<=w)return text;
@@ -388,7 +396,10 @@ function liveSet(d, now){
   const ids = new Set();
   holdRuns(d, now);
   for (const a of d.agents){ const v = vis.get(a.id); if (STAY.has(a.id) || a.state==="working" || a.state==="failed" || needsHelp(a) || (v && v.keep > now)) ids.add(a.id); }   // plain end-of-turn attention lingers LINGER ms, then leaves
-  for (const c of d.connections||[]) if (c.active){ if (c.from) ids.add(c.from); if (c.to) ids.add(c.to); }
+  // An active canvas link shows its ends, except team agents: Maestri keeps cross-floor links active long after
+  // the turn ends, so a team agent follows only its own work (above).
+  const team = new Set(d.agents.filter(a=>a.kind==="stage").map(a=>a.id));
+  for (const c of d.connections||[]) if (c.active) for (const id of [c.from, c.to]) if (id && !team.has(id)) ids.add(id);
   return ids;
 }
 function computeLayout(d, now){
@@ -443,10 +454,12 @@ function computeLayout(d, now){
   const busW = narrow => busIds.reduce((s,id)=>s+(narrow?0:bundleW(nOf(id)))+LANE, 0);
   const narrow = busW(false) > exitRoom, band = busW(narrow) + 16;
   const midHalf = PH/2, busTop = -midHalf - LIVE_ABOVE - band;
-  const yT = busTop - LIVE_BELOW - PH/2, yB = midHalf + LIVE_BELOW + LIVE_ABOVE + PH/2;
+  // the same gap above and below the hub row: the bus band above is mirrored below
+  const yT = busTop - LIVE_BELOW - PH/2, yB = -yT;
   const put = (a, x, y) => { pos[a.id] = [x, y]; };
-  if (by.N[0]) put(by.N[0], -hw/2 + size(by.N[0])[0]/2, yT);
-  if (by.S[0]) put(by.S[0], 0, yB);
+  // shorter modules hug the hub side of their row, so both gaps measure edge to edge
+  if (by.N[0]) put(by.N[0], -hw/2 + size(by.N[0])[0]/2, yT + (PH - size(by.N[0])[1])/2);
+  if (by.S[0]) put(by.S[0], 0, yB - (PH - size(by.S[0])[1])/2);
   // left column: Lumen on the hub row, other terminals and notes alternating below / above it
   const stack = [...by.X.map(a=>({a, w:size(a)[0], h:size(a)[1], n:nOf(a.id)})), ...liveNotes.map(n=>({note:n, w:NW, h:NH, n:1}))];
   const colW = Math.max(by.W[0] ? size(by.W[0])[0] : 0, ...stack.map(it=>it.w), 0);
@@ -466,13 +479,14 @@ function computeLayout(d, now){
   for (const cell of cols){
     const ids = Object.values(cell), sideCorr = sgn => ids.filter(a=>conn(a.id) && Math.sign(LIVE_ROW[a.slot] || 1)===sgn)
       .reduce((s,a)=>s+(narrow?0:bundleW(nOf(a.id)))+LANE+10, 0);
-    const cx = left + 22 + Math.max(sideCorr(-1), sideCorr(1)) + PW/2; left = cx + PW/2;
+    const cx = left + 10 + PLUG_RUN + Math.max(sideCorr(-1), sideCorr(1)) + PW/2; left = cx + PW/2;
     for (const r in cell) put(cell[r], cx, rowY[r]);
   }
   layout = {rows:[], stages:[], pos, notePos, width:0, visible, notes:new Set(liveNotes.map(n=>n.id)), hub,
     tree:{slot, narrow, busTop}};
 }
 const LIVE_ROW = {analise:-1, implementacao:0, revisao:1};
+const PLUG_RUN = 26;   // straight run before a team module: the cable plug (11 px) never sits on the bend
 const GAP_E = 96;   // room between the hub and the Concierge for the cable and its plugs
 function liveSlot(a){
   if (isChief(a)) return "hub";
@@ -874,7 +888,7 @@ function hubPlanTree(hub, hv){
   for (const col of Object.values(byCol)) for (const up of [true, false]){
     let cum = 0;
     col.filter(it=>it.up===up).sort((p,q)=>Math.abs(dy(p))-Math.abs(dy(q))).forEach(it=>{   // nearer = inner corridor
-      const half = bundleW(it.n)/2; it.x = it.L - 12 - cum - half; cum += bundleW(it.n) + LANE + 10; });
+      const half = bundleW(it.n)/2; it.x = it.L - PLUG_RUN - cum - half; cum += bundleW(it.n) + LANE + 10; });
   }
   // lanes top→bottom: upward corridors near→far, then downward ones far→near; leftmost exit = top lane
   const lanes = [...bus.filter(it=>it.up).sort((p,q)=>p.x-q.x), ...bus.filter(it=>!it.up).sort((p,q)=>q.x-p.x)];
@@ -1339,7 +1353,8 @@ function drawModule(a, time, now){
   ctx.fillStyle = mc; ctx.beginPath(); ctx.moveTo(x+10,y-9); ctx.lineTo(x+10+tabW,y-9); ctx.lineTo(x+18+tabW,y+1); ctx.lineTo(x+10,y+1); ctx.closePath(); ctx.fill();
   ctx.fillStyle="#0a0a12"; ctx.textAlign="left"; ctx.textBaseline="middle"; ctx.fillText(fit(ctx,a.name.toUpperCase(),tabW-12), x+17, y-4);
   ctx.font=MONO(9); ctx.fillStyle=rgba(tc,.85); ctx.textAlign="right";
-  ctx.fillText(`${(a.agentType||"?").toUpperCase().replace("CLAUDE_CODE","CLAUDE").replace("OPEN_CODE","OPENCODE")} · ${ago(a.lastActiveAt)}`, x+w-10, y+11);
+  const prog = (a.agentType||"?").toUpperCase().replace("CLAUDE_CODE","CLAUDE").replace("OPEN_CODE","OPENCODE");
+  ctx.fillText(fit(ctx, [prog, modelLabel(a.model), ago(a.lastActiveAt)].filter(Boolean).join(" · "), w-56), x+w-10, y+11);
   const rr = ctrl ? 15 : 19, rx = x+14+rr, ry = y+h/2+(ctrl?3:2);
   drawGauge(a, rx, ry, rr, sc, live, time, ctrl, chief);
   const tx = rx+rr+10, tw = x+w-10-tx; ctx.textAlign="left";
@@ -1675,7 +1690,7 @@ function openDrawer(id, refresh){
   $("dName").textContent = a.name; $("drawer").dataset.agent = a.id;
   const rows = [["Papel",a.role||"—"],["Equipe",a.floor],["Etapa",a.slot],["Estado",STATE[a.state]||a.state],["Atenção",a.attention?"sim":"não"],
     ["Tarefa",a.task||"—"],["Coluna",a.column||"—"],["Ferramentas",(a.lastTools||[]).join(", ")||"—"],["Skills",(a.skills||[]).join(", ")||"—"],
-    ["Programa",a.agentType||"—"],["Última atividade",a.lastActiveAt?`${ago(a.lastActiveAt)} atrás`:"—"]];
+    ["Programa",a.agentType||"—"],["Modelo",a.model||"—"],["Última atividade",a.lastActiveAt?`${ago(a.lastActiveAt)} atrás`:"—"]];
   $("dKv").innerHTML = rows.map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join("");
   $("dTail").textContent = (a.tail||[]).join("\n") || "(preview vazio)";
   if (!refresh) $("drawer").classList.add("open");
