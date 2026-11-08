@@ -450,10 +450,14 @@ function computeLayout(d, now){
   for (const a of by.T){ const t = teams[a.floor] ||= [], r = LIVE_ROW[a.slot]; let k = 0; while (t[k] && t[k][r]) k++; (t[k] ||= {})[r] = a; }
   const cols = Object.keys(teams).sort((p,q)=>floorOrder(p)-floorOrder(q)||p.localeCompare(q)).flatMap(f=>teams[f]);
   // bus band between the top row and the hub row: one lane per wired team module, exits on the hub top
-  const busIds = by.T.filter(a=>conn(a.id)).map(a=>a.id), exitRoom = hw - 28 - 26;
-  const busW = narrow => busIds.reduce((s,id)=>s+(narrow?0:bundleW(nOf(id)))+LANE, 0);
-  const narrow = busW(false) > exitRoom, band = busW(narrow) + 16;
-  const midHalf = PH/2, busTop = -midHalf - LIVE_ABOVE - band;
+  // Team links leave the hub on two buses: the top row over the hub, the bottom row under it, and the hub row
+  // on either side, picked at random but fixed per link. Each bus has its own band, so nothing crosses.
+  const lowerBus = a => { const r = LIVE_ROW[a.slot]; return r > 0 || (r === 0 && srand("bus|"+conn(a.id).id) < .5); };
+  const busAs = by.T.filter(a=>conn(a.id)), exitRoom = hw - 28 - 26;
+  const busW = (narrow, low) => busAs.filter(a=>lowerBus(a)===low).reduce((s,a)=>s+(narrow?0:bundleW(nOf(a.id)))+LANE, 0);
+  const narrow = busW(false, false) > exitRoom, band = Math.max(busW(narrow, false), busW(narrow, true)) + 16;
+  const lower = new Set(busAs.filter(lowerBus).map(a=>conn(a.id).id));
+  const midHalf = PH/2, busTop = -midHalf - LIVE_ABOVE - band, lowBot = midHalf + LIVE_BELOW + band;
   // the same gap above and below the hub row: the bus band above is mirrored below
   const yT = busTop - LIVE_BELOW - PH/2, yB = -yT;
   const put = (a, x, y) => { pos[a.id] = [x, y]; };
@@ -477,13 +481,14 @@ function computeLayout(d, now){
   if (by.E[0]){ const [w] = size(by.E[0]); put(by.E[0], left + GAP_E + w/2, 0); left += GAP_E + w; }
   const rowY = {"-1":yT, "0":0, "1":yB};
   for (const cell of cols){
-    const ids = Object.values(cell), sideCorr = sgn => ids.filter(a=>conn(a.id) && Math.sign(LIVE_ROW[a.slot] || 1)===sgn)
+    const goesUp = a => LIVE_ROW[a.slot] < 0 || (LIVE_ROW[a.slot] === 0 && lowerBus(a));
+    const ids = Object.values(cell), sideCorr = sgn => ids.filter(a=>conn(a.id) && (goesUp(a) ? -1 : 1)===sgn)
       .reduce((s,a)=>s+(narrow?0:bundleW(nOf(a.id)))+LANE+10, 0);
     const cx = left + 10 + PLUG_RUN + Math.max(sideCorr(-1), sideCorr(1)) + PW/2; left = cx + PW/2;
     for (const r in cell) put(cell[r], cx, rowY[r]);
   }
   layout = {rows:[], stages:[], pos, notePos, width:0, visible, notes:new Set(liveNotes.map(n=>n.id)), hub,
-    tree:{slot, narrow, busTop}};
+    tree:{slot, narrow, busTop, lowBot, lower}};
 }
 const LIVE_ROW = {analise:-1, implementacao:0, revisao:1};
 const PLUG_RUN = 26;   // straight run before a team module: the cable plug (11 px) never sits on the bend
@@ -884,19 +889,33 @@ function hubPlanTree(hub, hv){
   const bus = items.filter(it=>it.slot==="T");
   if (T.narrow) bus.forEach(it=>it.n=1);
   const byCol = {};
-  for (const it of bus){ it.L = it.v.x - it.w/2; it.up = it.v.y < hv.y - 1; (byCol[Math.round(it.v.x)] ||= []).push(it); }
+  for (const it of bus){ it.L = it.v.x - it.w/2; it.low = T.lower.has(it.c.id);
+    it.up = it.low ? it.v.y < hv.y + 1 : it.v.y < hv.y - 1;   // vertical direction from its band to the target
+    (byCol[Math.round(it.v.x)] ||= []).push(it); }
   for (const col of Object.values(byCol)) for (const up of [true, false]){
     let cum = 0;
     col.filter(it=>it.up===up).sort((p,q)=>Math.abs(dy(p))-Math.abs(dy(q))).forEach(it=>{   // nearer = inner corridor
       const half = bundleW(it.n)/2; it.x = it.L - PLUG_RUN - cum - half; cum += bundleW(it.n) + LANE + 10; });
   }
-  // lanes top→bottom: upward corridors near→far, then downward ones far→near; leftmost exit = top lane
-  const lanes = [...bus.filter(it=>it.up).sort((p,q)=>p.x-q.x), ...bus.filter(it=>!it.up).sort((p,q)=>q.x-p.x)];
+  // upper bus, lanes top→bottom: upward corridors near→far, then downward ones far→near; leftmost exit = top lane
+  const upper = bus.filter(it=>!it.low);
+  const lanes = [...upper.filter(it=>it.up).sort((p,q)=>p.x-q.x), ...upper.filter(it=>!it.up).sort((p,q)=>q.x-p.x)];
   const hasN = items.some(it=>it.slot==="N"), ex0 = hasN ? nx + 12 + LANE : left + 14;
   let cum = 0;
   for (const it of lanes){ const half = bundleW(it.n)/2, off = cum + half; cum += bundleW(it.n) + LANE;
     const ex = ex0 + off, ly = T.busTop + 8 + off, ty = it.v.y, s = it.up ? -1 : 1;
     plan.set(it.c.id, bundleOf([[ex,top],[ex,ly+K],[ex+K,ly],[it.x-K,ly],[it.x,ly+s*K],[it.x,ty-s*K],[it.x+K,ty],[it.L,ty]], it.n)); }
+  // lower bus, the mirror: lanes bottom→top: downward corridors near→far, then upward ones far→near. They leave the
+  // hub's right edge below its centre (the bottom edge carries the tool chips): the lowest exit drops first and
+  // takes the deepest lane.
+  const low = bus.filter(it=>it.low), room = hh/2 - 14;
+  if (low.reduce((s,it)=>s+bundleW(it.n)+LANE,0) > room) low.forEach(it=>it.n=1);
+  const lowLanes = [...low.filter(it=>!it.up).sort((p,q)=>p.x-q.x), ...low.filter(it=>it.up).sort((p,q)=>q.x-p.x)];
+  const kx = Math.min(1, room/(lowLanes.reduce((s,it)=>s+bundleW(it.n)+LANE,0)||1));
+  cum = 0;
+  for (const it of lowLanes){ const half = bundleW(it.n)/2, off = cum + half; cum += bundleW(it.n) + LANE;
+    const ye = bottom - 8 - off*kx, xd = right + 12 + off, ly = T.lowBot - 8 - off, ty = it.v.y, s = it.up ? -1 : 1;
+    plan.set(it.c.id, bundleOf([[right-2,ye],[xd-K,ye],[xd,ye+K],[xd,ly-K],[xd+K,ly],[it.x-K,ly],[it.x,ly+s*K],[it.x,ty-s*K],[it.x+K,ty],[it.L,ty]], it.n)); }
   return plan;
 }
 
