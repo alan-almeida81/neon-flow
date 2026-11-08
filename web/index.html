@@ -206,6 +206,14 @@ footer .run{white-space:nowrap;animation:tick 60s linear infinite;padding-left:1
 #termSend{min-width:150px;background:var(--cyan);color:#081014;border:0;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.16em;cursor:pointer}
 #termSend:disabled{opacity:.45;cursor:default}
 #termSend:not(:disabled):hover{filter:brightness(1.15)}
+
+.dones{position:absolute;z-index:5;left:50%;bottom:34px;transform:translateX(-50%);display:flex;flex-direction:column-reverse;gap:6px;align-items:center;pointer-events:none}
+.done{pointer-events:auto;cursor:pointer;font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--text);background:rgba(6,14,10,.94);border:1px solid var(--green);border-left-width:4px;
+  padding:7px 14px;box-shadow:0 0 18px color-mix(in srgb,var(--green) 35%,transparent);animation:doneIn .3s steps(4) both;max-width:min(560px,90vw);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.done b{color:var(--green);letter-spacing:.14em}.done span{color:var(--muted)}
+.done.out{opacity:0;transform:translateY(6px);transition:opacity .35s,transform .35s}
+@keyframes doneIn{0%{clip-path:inset(0 50% 0 50%);filter:brightness(2)}100%{clip-path:inset(0 0 0 0);filter:none}}
+@media (prefers-reduced-motion:reduce){.done{animation:none}}
 </style>
 </head>
 <body>
@@ -224,7 +232,7 @@ footer .run{white-space:nowrap;animation:tick 60s linear infinite;padding-left:1
 <main>
   <section>
     <div class="section-title">CONSOLE // MÓDULOS · CIRCUITOS · FERRAMENTAS</div>
-    <div class="stage" id="stage"><div class="asks" id="asks" aria-live="assertive"></div><canvas id="graph" tabindex="0" aria-label="Console dos agentes: clique num módulo para focar; Esc volta"></canvas>
+    <div class="stage" id="stage"><div class="asks" id="asks" aria-live="assertive"></div><div class="dones" id="dones" aria-live="polite"></div><canvas id="graph" tabindex="0" aria-label="Console dos agentes: clique num módulo para focar; Esc volta"></canvas>
       <div class="scene-ui"><span class="crumb" id="crumb">CONSOLE</span>
         <button id="modeLive" class="on" aria-pressed="true">AO VIVO</button><button id="modeAll" aria-pressed="false">TODOS</button>
         <button id="back" hidden>◂ VOLTAR · ESC</button><button id="dataBtn" hidden>DADOS ▸</button><button id="termBtn" hidden title="Abrir o terminal do agente (ou clique de novo no módulo · tecla T)">▶ TERMINAL</button></div>
@@ -1608,7 +1616,7 @@ function render(d){
   $("gtext").textContent = ground ? `${ground.name}: ${ground.status||"sem status"}` : "—";
   $("gbar").style.width = ground && ground.progress!=null ? `${Math.round(ground.progress*100)}%` : "0";
   syncScene(d);
-  renderAsks(d);
+  renderAsks(d); checkDone(d);
   renderEvents(d.events||[]);
   renderSide(d);
   drawTrace();
@@ -1794,11 +1802,42 @@ $("term").addEventListener("close", closeTerminal);
 // The question comes from the optional `question` field of the agent or, failing that, from the
 // last lines of the terminal preview. Nothing is answered from here: the operator replies in Maestri.
 const ASKS = {seen:new Map(), hidden:new Map(), rendered:new Set(), baseTitle:document.title, audio:null};
-function askKind(a){ return a.attention ? "decision" : a.state==="failed" ? "fail" : null; }
+// Maestri raises "attention" whenever a turn ends, so a card only opens when the terminal really asks
+// something; a plain end of turn goes to the log and shows a short success toast instead.
+const IDLE_LINE = /^[>❯›]\s*(Try\s+"|Ask Codex|$)|^(Worked|Churned|Cooked|Brewed|Baked|Crunched|Thought|Sautéed|Cogitated)\b.*\b(for|done)\b|^[✻✶✳✢·*]\s+\w+(ing|ed)\b.*(for|done)|\d+h limit|\/status\b|for agents · |f2 to view|^\S+\s+(low|medium|high|max)\s+·|\/effort\b|\?\s*for shortcuts|esc to (interrupt|cancel)|shift\+tab|bypass permissions|auto-accept|accept edits|^[○●◯]\s*(low|medium|high|max)\b|^[A-Za-z]:\\|^~?\/[\w.\/-]+$|^[─━═╭╰│╮╯\s-]+$|context left|tokens? (used|left)/i;
+const ASK_LINE = /\?\s*["')\]]*\s*$|\((y\/n|s\/n|yes\/no|sim\/não)\)|\[(y\/n|s\/n)\]|\b(do you want|would you like|should i|shall i|can i|may i|want me to|proceed|approve|allow|permission|confirm|choose|select|which (one|option)|waiting for (your|user))\b|\b(deseja|quer que|posso|devo|prefere|confirma|aprova|autoriza|escolha|qual (opção|caminho|abordagem)|preciso (da sua|de uma|que você)|aguardando (sua|decisão|resposta|aprovação)|depende de (você|vc|sua)|preciso que (você|vc)|sua (decisão|aprovação|confirmação)|precisa (decidir|definir|escolher|aprovar))(?![a-zà-ú])|^[❯›>]?\s*1[.)]\s+\S/i;
+function askLines(a){
+  return (a.tail||[]).map(s=>String(s).replace(/\s+$/,"")).filter(s=>s.trim() && !IDLE_LINE.test(s.trim())).slice(-6);
+}
+function needsHelp(a){
+  if (a.question) return true;
+  if (!a.attention || a.state==="working") return false;
+  return askLines(a).some(s=>ASK_LINE.test(s.trim()));
+}
+function askKind(a){ return needsHelp(a) ? "decision" : null; }   // failures go to the log only
 function askText(a){
   if (a.question) return String(a.question);
-  const t = (a.tail||[]).map(s=>String(s).trim()).filter(Boolean);
-  return t.slice(-3).join("\n") || (a.attention ? "O agente sinalizou que precisa de uma decisão." : "O agente parou com falha.");
+  const t = askLines(a), hit = t.map(s=>ASK_LINE.test(s.trim())), first = hit.indexOf(true), last = hit.lastIndexOf(true);
+  const pick = first >= 0 ? t.slice(first, Math.min(t.length, last+3)).slice(0, 6) : t.slice(-3);
+  return pick.map(s=>s.trim()).join("\n") || (a.state==="failed" ? "O agente parou com falha." : "O agente precisa de uma decisão.");
+}
+// Success: a short toast that closes by itself after 5 s (turn finished, no question pending).
+const DONE = {prev:new Map(), last:new Map(), ready:false};
+function toastDone(a){
+  const now = Date.now(); if (now - (DONE.last.get(a.id)||0) < 8000) return; DONE.last.set(a.id, now);
+  const box = $("dones"), el = document.createElement("div"); el.className = "done"; el.setAttribute("role", "status");
+  el.innerHTML = `<b>✔ ${esc(a.name.toUpperCase())}</b> concluiu${a.task ? ` · <span>${esc(a.task)}</span>` : ""}`;
+  el.onclick = ()=>{ lastManual = 0; focusAgent(a.id); el.remove(); };
+  box.prepend(el); while (box.children.length > 3) box.lastChild.remove();
+  setTimeout(()=>{ el.classList.add("out"); setTimeout(()=>el.remove(), 400); }, 5000);
+}
+function checkDone(d){
+  for (const a of d.agents){
+    const p = DONE.prev.get(a.id), help = needsHelp(a);
+    if (DONE.ready && p && a.state!=="failed" && !help && ((p.state==="working" && a.state==="completed") || (a.attention && !p.attention && a.state!=="working"))) toastDone(a);
+    DONE.prev.set(a.id, {state:a.state, attention:a.attention});
+  }
+  DONE.ready = true;
 }
 function askBeep(){
   try {

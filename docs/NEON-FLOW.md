@@ -105,11 +105,13 @@ Ao clicar num agente, a câmera foca o módulo e aparece o botão **▶ TERMINAL
 - **Enviar:** o campo abaixo do terminal manda o texto como prompt (`POST /api/prompt` → `POST /api/terminals/{id}/prompt` no Wire). Ctrl+Enter envia, Enter quebra linha; o rascunho de cada agente fica guardado enquanto a página estiver aberta. O servidor só aceita o envio do próprio computador, com `Content-Type: application/json` e sem `Origin` de outro site, e o Maestri só aceita se o pareamento tiver permissão para isso.
 - No `?demo=1` o terminal é simulado: digita uma sessão de exemplo e responde ao que for enviado.
 
-## Mensagens de decisão e falha
+## Mensagens de decisão
 
-Quando um agente pede uma decisão (`attention: true`) ou para com falha (`state: "failed"`), aparece um cartão ao lado do módulo dele, com seta apontando para o agente. O cartão acompanha a câmera (também em tela cheia), escolhe o lado que não cobre outros módulos e, se o agente estiver fora da tela, espera no canto superior direito.
+Só fica na tela o que precisa de decisão do operador. O Maestri marca `attention` a cada fim de turno, então o cartão abre apenas quando há `question` ou quando a cauda do terminal pergunta algo (`?` no fim da linha, `(y/n)`, menu `1.`, pedido de permissão, "depende de você", "posso", "deseja", "Do you want"…), ignorando linhas de prompt ocioso e rodapés do Claude Code e do Codex. Fim de turno sem pergunta mostra a faixa verde **✔ AGENTE concluiu** por 5 s; falhas e demais avisos ficam só no BUFFER.
+
+O cartão aparece ao lado do módulo do agente, com seta apontando para o agente. O cartão acompanha a câmera (também em tela cheia), escolhe o lado que não cobre outros módulos e, se o agente estiver fora da tela, espera no canto superior direito.
 
 - **Conteúdo:** papel, equipe, tarefa, há quanto tempo e a pergunta. A pergunta vem do campo opcional `question`; sem ele, das últimas linhas da cauda do terminal.
 - **Ações:** **RESPONDER** abre o terminal completo com o cursor no campo de envio; **VER NO MAPA** foca o agente e abre o detalhe; **OCULTAR** esconde até o próximo pedido.
 - **Avisos fora da página:** o título da aba mostra `(N) ⚠ decisão`; um bipe curto toca a cada pedido novo; com **AVISAR NA ÁREA DE TRABALHO**, o navegador mostra uma notificação do sistema (clicar nela abre o agente).
-- Até três cartões ficam visíveis; os demais aparecem como `+N aguardando`. Pedidos de decisão vêm antes das falhas.
+- Até três cartões ficam visíveis; os demais aparecem como `+N aguardando`.

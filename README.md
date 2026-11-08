@@ -57,8 +57,9 @@ Um agente para e pergunta. O cartão aparece ao lado do módulo dele; **RESPONDE
 
 <img src="docs/media/decisao.png" alt="Cartão DECISÃO PENDENTE com a pergunta do agente, ancorado abaixo do módulo dele" width="100%">
 
-- O cartão **DECISÃO PENDENTE** fica ao lado do módulo do agente, com seta apontando para ele. Ele acompanha a câmera e escolhe o lado que não cobre outros módulos. Falhas aparecem do mesmo jeito, em vermelho.
-- A pergunta vem do campo `question` ou, sem ele, das últimas linhas do terminal.
+- Só fica na tela o que precisa da sua decisão. O Maestri sinaliza atenção a cada fim de turno, então o cartão só abre quando o terminal pergunta algo de verdade: pergunta com `?`, `(y/n)`, menu de opções, pedido de permissão ou frases como "depende de você" e "posso…?". Linhas de prompt ocioso e de rodapé do Claude Code e do Codex são ignoradas.
+- O cartão **DECISÃO PENDENTE** fica ao lado do módulo do agente, com seta apontando para ele. Ele acompanha a câmera e escolhe o lado que não cobre outros módulos. A pergunta vem do campo `question` ou do trecho do terminal que pergunta.
+- Fim de turno sem pergunta vira uma faixa verde **✔ AGENTE concluiu**, que some sozinha em 5 s. Falhas e demais avisos vão para o **BUFFER**.
 - Fora da página: o título da aba mostra `(1) ⚠ decisão`, toca um bipe curto e, se você permitir, chega uma notificação do sistema. Clicar nela abre o agente.
 
 ### Terminal completo, com envio
