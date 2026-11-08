@@ -400,10 +400,13 @@ function holdRuns(d, now){
     if (v) v.held = STAY.has(a.id);
   }
 }
+// The Vigia is a permanent monitor: a script that only prints now and then, so Wire activity flickers.
+// It stays on stage while its terminal runs (Maestri status other than exited/error).
+function watcher(a){ return a.slot==="vigia" && !["exited","error","crashed"].includes(String(a.maestriStatus||"").toLowerCase()); }
 function liveSet(d, now){
   const ids = new Set();
   holdRuns(d, now);
-  for (const a of d.agents){ const v = vis.get(a.id); if (STAY.has(a.id) || a.state==="working" || a.state==="failed" || needsHelp(a) || (v && v.keep > now)) ids.add(a.id); }   // plain end-of-turn attention lingers LINGER ms, then leaves
+  for (const a of d.agents){ const v = vis.get(a.id); if (STAY.has(a.id) || a.state==="working" || a.state==="failed" || needsHelp(a) || (v && v.keep > now) || watcher(a)) ids.add(a.id); }   // plain end-of-turn attention lingers LINGER ms, then leaves
   // An active canvas link shows its ends, except team agents: Maestri keeps cross-floor links active long after
   // the turn ends, so a team agent follows only its own work (above).
   const team = new Set(d.agents.filter(a=>a.kind==="stage").map(a=>a.id));

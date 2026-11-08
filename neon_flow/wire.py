@@ -143,4 +143,11 @@ def send_prompt(terminal_id: str, text: str) -> dict:
 def feed() -> dict:
     """Snapshot of the active Maestri workspace (terminals, notes, canvas connections, floors)."""
     workspace = api("/api/info")["activeWorkspaceId"]
-    return api(f"/api/workspaces/{quote(workspace, safe='')}/feed")
+    snap = api(f"/api/workspaces/{quote(workspace, safe='')}/feed")
+    # The feed mirrors the floor open in Maestri; the ground canvas holds the Orquestrador's links
+    # and the cross-floor connectors, so use it whatever floor the operator is looking at.
+    try:
+        ground = api(f"/api/workspaces/{quote(workspace, safe='')}/feed?floor=ground").get("canvas")
+    except Exception:
+        ground = None
+    return {**snap, "canvas": ground} if ground else snap
