@@ -165,6 +165,7 @@ footer .run{white-space:nowrap;animation:tick 60s linear infinite;padding-left:1
 #termStatus.on{color:var(--green)}
 #term header button{background:rgba(62,242,255,.08);border:1px solid var(--cyan);color:var(--cyan);font-family:var(--mono);font-size:11px;letter-spacing:.14em;padding:5px 9px;cursor:pointer}
 #term header button:hover,#term header button:focus-visible{background:var(--cyan);color:#111;outline:none}
+.scene-ui #termBtn{background:var(--cyan);color:#111}.scene-ui #termBtn:hover{filter:brightness(1.15)}
 #termOut{flex:1;min-height:0;padding:10px 12px;overflow:auto;background:#05060a;position:relative}
 #termOut .xterm{width:max-content;min-width:100%;height:100%}
 #term .termfoot{padding:6px 14px;background:#05060a;border-top:1px solid var(--cyan-dim);font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--muted)}
@@ -226,9 +227,9 @@ footer .run{white-space:nowrap;animation:tick 60s linear infinite;padding-left:1
     <div class="stage" id="stage"><div class="asks" id="asks" aria-live="assertive"></div><canvas id="graph" tabindex="0" aria-label="Console dos agentes: clique num módulo para focar; Esc volta"></canvas>
       <div class="scene-ui"><span class="crumb" id="crumb">CONSOLE</span>
         <button id="modeLive" class="on" aria-pressed="true">AO VIVO</button><button id="modeAll" aria-pressed="false">TODOS</button>
-        <button id="back" hidden>◂ VOLTAR · ESC</button><button id="dataBtn" hidden>DADOS ▸</button></div>
+        <button id="back" hidden>◂ VOLTAR · ESC</button><button id="dataBtn" hidden>DADOS ▸</button><button id="termBtn" hidden title="Abrir o terminal do agente (ou clique de novo no módulo · tecla T)">▶ TERMINAL</button></div>
       <button class="maxbtn" id="maxBtn" aria-pressed="false" title="Ocupar a tela inteira (Esc volta)">⛶ TELA CHEIA</button>
-      <div class="hint">clique: focar · arrastar: mover · roda: zoom · duplo clique: visão geral · ←→ agentes</div>
+      <div class="hint">clique: focar · de novo: terminal · arrastar: mover · roda: zoom · duplo clique: visão geral · ←→ agentes</div>
       <div class="legend"><span><i style="background:linear-gradient(90deg,#2de2e6,#ff3ec8,#fcee0a,#4dffa6)"></i>conexão do canvas Maestri energizada = troca ativa (cada circuito com cor própria)</span>
         <span><i style="background:var(--red-dim)"></i>conexão ociosa</span><span><i style="background:#ffb547"></i>ferramenta do turno</span>
         <span><i style="background:#c27bff"></i>skill</span></div></div>
@@ -540,7 +541,7 @@ function setScene(m, target, label){
   scene = {mode:m, target, since:performance.now()};
   const a = agentById(target);
   $("crumb").textContent = m==="overview" ? (mode==="live" ? "AO VIVO" : "CONSOLE") : m==="team" ? `CONSOLE ▸ ${label}` : `${mode==="live"?"AO VIVO":"CONSOLE"} ▸ ${teamName(a&&a.floor)} ▸ ${(a&&a.name||"").toUpperCase()}`;
-  $("back").hidden = m==="overview"; $("dataBtn").hidden = m!=="agent";
+  $("back").hidden = m==="overview"; $("dataBtn").hidden = m!=="agent"; $("termBtn").hidden = m!=="agent"; { const hint = document.querySelector(".hint"); if (hint) hint.hidden = m==="agent"; }
   selected = m==="agent" ? target : null;
 }
 function goOverview(quiet){ setScene("overview"); flyTo(overviewCamera(), quiet ? "AGENTE SAIU DE CENA" : mode==="live" ? "AO VIVO" : "VISÃO GERAL", mode==="live" ? liveSummary() : ""); }
@@ -586,7 +587,9 @@ canvas.addEventListener("pointerup", e=>{
   canvas.classList.remove("drag");
   if (drag && !drag.moved){
     const h = hit(...toWorld(e.clientX,e.clientY));
-    if (h && h.agent) focusAgent(h.agent); else if (h && h.row) focusTeam(h.row);
+    // first click focuses the agent; clicking the focused agent again opens its terminal
+    if (h && h.agent){ if (scene.mode==="agent" && scene.target===h.agent) openTerminal(h.agent); else focusAgent(h.agent); }
+    else if (h && h.row) focusTeam(h.row);
   }
   drag = null;
 });
@@ -598,6 +601,8 @@ canvas.addEventListener("wheel", e=>{e.preventDefault(); tween=null; lastManual=
 canvas.addEventListener("dblclick", ()=>{lastManual=0;goOverview()});
 $("back").onclick = ()=>{lastManual=0;goOverview()};
 $("dataBtn").onclick = ()=>scene.target && openDrawer(scene.target);
+$("termBtn").onclick = ()=>scene.target && openTerminal(scene.target).then(()=>$("termInput").focus());
+addEventListener("keydown", e=>{ if ((e.key==="t"||e.key==="T") && scene.mode==="agent" && scene.target && !$("term").open && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){ e.preventDefault(); openTerminal(scene.target).then(()=>$("termInput").focus()); } });
 function cycle(dir){
   const list = [...layout.visible].map(agentById).filter(Boolean).sort((a,b)=>(layout.pos[a.id][1]-layout.pos[b.id][1])||(layout.pos[a.id][0]-layout.pos[b.id][0]));
   if (!list.length) return;

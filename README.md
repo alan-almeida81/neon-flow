@@ -77,7 +77,7 @@ Um agente para e pergunta. O cartão aparece ao lado do módulo dele; **RESPONDE
 <td width="50%"><img src="docs/media/tela-cheia.png" alt="Tela cheia com o mapa ocupando a janela inteira"></td>
 </tr>
 <tr>
-<td>Clique num módulo: a câmera voa até ele (<code>ACESSANDO // NOME</code>) e a <i>datashard</i> mostra equipe, etapa, tarefa, ferramentas e a cauda do terminal. <b>DADOS ▸</b> abre o painel lateral com o botão do terminal completo.</td>
+<td>Clique num módulo: a câmera voa até ele (<code>ACESSANDO // NOME</code>) e a <i>datashard</i> mostra equipe, etapa, tarefa, ferramentas e a cauda do terminal. <b>▶ TERMINAL</b>, um segundo clique no módulo ou a tecla <kbd>T</kbd> abrem o terminal para enviar mensagens; <b>DADOS ▸</b> abre o painel lateral.</td>
 <td><b>⛶ TELA CHEIA</b> esconde os painéis e reenquadra o mapa. Arrastar move, roda dá zoom, duplo clique volta à visão geral e <kbd>Esc</kbd> sai.</td>
 </tr>
 </table>

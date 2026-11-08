@@ -98,7 +98,7 @@ No modo AO VIVO aparece também o rótulo `UPLINK LUMEN // …`. Com movimento r
 
 ## Terminal completo
 
-No detalhe do agente (clique no módulo e depois em **DADOS**, ou em **VER NO MAPA** num aviso), o botão **ABRIR TERMINAL COMPLETO** abre a tela do terminal com o mesmo fluxo que o Orbita usa:
+Ao clicar num agente, a câmera foca o módulo e aparece o botão **▶ TERMINAL**; clicar de novo no módulo focado ou apertar **T** também abre. O terminal ainda abre por **ABRIR TERMINAL COMPLETO** no painel **DADOS** e por **RESPONDER** nos avisos. Ele usa o mesmo fluxo do Orbita:
 
 - O servidor abre o websocket `/api/terminals/{id}/stream` do Maestri Wire (TLS com chave fixada, token do keyring) e repassa saída e geometria ao navegador por Server-Sent Events em `GET /api/terminal-stream?terminalId=…`. O token nunca chega ao navegador.
 - A tela é desenhada com [xterm.js](https://github.com/xtermjs/xterm.js) 6.0.0, empacotado em `web/vendor/xterm/` (licença MIT), sem CDN. Cores ANSI, cursor e tamanho real do terminal são preservados; **AMPLIAR** ocupa a janela inteira.
