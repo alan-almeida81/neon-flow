@@ -361,9 +361,33 @@ function agentById(id){return data && data.agents.find(a=>a.id===id)}
 function routinesOf(a){return (data.routines||[]).filter(r=>r.terminal===a.id)}
 
 // Live mode keeps only agents executing now, plus a short linger so the completion is visible.
+// A team agent seen working stays on stage through the pauses between its turns while its team's run is open,
+// until a later stage of the same team takes over (Prisma -> Forja -> Sentinela) or the run closes; then it lingers.
+const STAY = new Map();   // agent id -> run id it is held for
+const STEP = {analise:0, implementacao:1, revisao:2};
+function teamRun(d, a){
+  if (a.kind!=="stage") return null;
+  const t = teamName(a.floor), r = (d.laneRuns||{})[t.charAt(0)+t.slice(1).toLowerCase()];
+  return r && r.open ? r.runId : null;
+}
+function holdRuns(d, now){
+  const top = {};   // floor -> latest stage working or held
+  for (const a of d.agents){
+    const key = teamRun(d, a);
+    if (STAY.get(a.id) !== key) STAY.delete(a.id);
+    if (key && a.state==="working") STAY.set(a.id, key);
+    if (STAY.has(a.id)) top[a.floor] = Math.max(top[a.floor] ?? -1, STEP[a.slot] ?? -1);
+  }
+  for (const a of d.agents){
+    const v = vis.get(a.id), keep = STAY.has(a.id) && a.state!=="working" && (STEP[a.slot] ?? -1) < top[a.floor];
+    if (keep || (v && v.held && !STAY.has(a.id))){ STAY.delete(a.id); if (v) v.keep = Math.max(v.keep||0, now + LINGER); }
+    if (v) v.held = STAY.has(a.id);
+  }
+}
 function liveSet(d, now){
   const ids = new Set();
-  for (const a of d.agents){ const v = vis.get(a.id); if (a.state==="working" || a.state==="failed" || needsHelp(a) || (v && v.keep > now)) ids.add(a.id); }   // plain end-of-turn attention lingers LINGER ms, then leaves
+  holdRuns(d, now);
+  for (const a of d.agents){ const v = vis.get(a.id); if (STAY.has(a.id) || a.state==="working" || a.state==="failed" || needsHelp(a) || (v && v.keep > now)) ids.add(a.id); }   // plain end-of-turn attention lingers LINGER ms, then leaves
   for (const c of d.connections||[]) if (c.active){ if (c.from) ids.add(c.from); if (c.to) ids.add(c.to); }
   return ids;
 }
