@@ -1376,7 +1376,31 @@ function roleIconPass(a, cx, cy, s, color, live){
   ctx.restore();
 }
 // Chromatic aberration (pink/cyan ghosts) + neon core; a brief horizontal tear while the state is fresh.
+// Coin flip: now and then each icon spins once around the horizontal or vertical axis, at its own random moment.
+// Rare and unsynchronized: each agent has its own period (20-45 s) and flips in a window with ~35% chance,
+// so an icon turns about once a minute or two, never all together. Axis picked by hash. Reduced motion: no flip.
+const FLIP_SECS = .9;
+function coinFlip(a){
+  if (REDUCE) return null;
+  const t = Date.now()/1000, h = hash("coin|"+a.id), period = 20 + (h % 2500)/100, off = (h >> 4) % 1000 / 1000 * period;
+  const k = Math.floor((t + off)/period), at = (t + off) - k*period - (hash(a.id+"|"+k) % 1500)/100;
+  if (at < 0 || at > FLIP_SECS || hash("go|"+a.id+"|"+k) % 100 >= 35) return null;
+  const p = at / FLIP_SECS, e = p < .5 ? 2*p*p : 1 - Math.pow(-2*p+2, 2)/2;   // ease in-out over one full turn
+  return {axis: hash("ax|"+a.id+"|"+k) % 2 ? "h" : "v", c: Math.cos(e*TAU)};
+}
 function roleIcon(a, cx, cy, s, color, live, tear=0){
+  const flip = coinFlip(a);
+  if (flip){ const c = Math.max(.06, Math.abs(flip.c));
+    ctx.save(); ctx.translate(cx, cy); flip.axis === "h" ? ctx.scale(c, 1) : ctx.scale(1, c); ctx.translate(-cx, -cy);
+    if (flip.c < 0) ctx.globalAlpha *= .75;   // the back face reads a little darker, like the coin's reverse
+    roleIconFace(a, cx, cy, s, color, live, tear); ctx.restore();
+    if (Math.abs(flip.c) < .35){ ctx.save(); ctx.strokeStyle = rgba(color, .9); ctx.lineWidth = 1.6; ctx.shadowColor = color; ctx.shadowBlur = 8;   // bright edge as it turns
+      ctx.beginPath(); flip.axis === "h" ? (ctx.moveTo(cx, cy-s), ctx.lineTo(cx, cy+s)) : (ctx.moveTo(cx-s, cy), ctx.lineTo(cx+s, cy)); ctx.stroke(); ctx.restore(); }
+    return;
+  }
+  roleIconFace(a, cx, cy, s, color, live, tear);
+}
+function roleIconFace(a, cx, cy, s, color, live, tear=0){
   if (!REDUCE){ ctx.save(); ctx.globalAlpha *= live ? .55 : .3;
     roleIconPass(a, cx-1.4+tear, cy, s, "#ff3ec8", false); roleIconPass(a, cx+1.4-tear, cy, s, "#2de2e6", false); ctx.restore(); }
   roleIconPass(a, cx, cy, s, color, live);
