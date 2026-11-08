@@ -72,7 +72,9 @@ def build_office(snapshot: dict, runtime: dict, board: dict, memory: dict) -> di
     def event(kind: str, text: str, actors: list) -> None:
         events.appendleft({"at": int(now * 1000), "kind": kind, "text": text, "actors": actors})
 
-    records = {a["roleName"]: a for a in runtime.get("agents", [])}
+    # Role-level records (no agentName) plus one per team agent: Prisma-1..3 share a role but not a task.
+    records = {a["roleName"]: a for a in runtime.get("agents", []) if not a.get("agentName")}
+    by_agent = {(a["roleName"], a["agentName"].casefold()): a for a in runtime.get("agents", []) if a.get("agentName")}
     cards = {c["id"]: c for c in board.get("cards", [])}
     lists = {l["id"]: l["name"] for l in board.get("lists", [])}
     nodes = {n["id"]: n for n in snapshot.get("canvas", {}).get("nodes", [])}
@@ -84,7 +86,7 @@ def build_office(snapshot: dict, runtime: dict, board: dict, memory: dict) -> di
             continue
         name = terminal.get("name") or "Agente"
         names[terminal["id"]] = name
-        record = records.get(terminal.get("roleName"), {})
+        record = by_agent.get((terminal.get("roleName"), name.casefold())) or records.get(terminal.get("roleName"), {})
         if name.casefold() == "lumen":
             record = runtime.get("lumen") or {}
         status = record.get("status", "unknown")
