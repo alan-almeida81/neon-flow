@@ -140,7 +140,9 @@ def build_office(snapshot: dict, runtime: dict, board: dict, memory: dict) -> di
     links, active = [], set()
     seen = memory.get("links", set())
     for connection in snapshot.get("canvas", {}).get("connections", []):
-        a, b = connection.get("fromNodeId"), connection.get("toNodeId")
+        # a cross-floor link ends on a "connector" node standing for a terminal on another floor
+        a, b = ((nodes.get(n, {}).get("connector") or {}).get("remoteTerminalId") or n
+                for n in (connection.get("fromNodeId"), connection.get("toNodeId")))
         if not connection.get("isActive") or not (a in names or b in names):
             continue
         if a in names and b in names:

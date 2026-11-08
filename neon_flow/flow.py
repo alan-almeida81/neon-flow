@@ -49,6 +49,11 @@ def canvas_links(snapshot: dict, terminals: dict) -> tuple[list, list]:
     """Every Maestri canvas connection (active or not) and the notes wired to terminals."""
     by_node = {t.get("nodeId") or tid: tid for tid, t in terminals.items()}
     nodes = {n["id"]: n for n in snapshot.get("canvas", {}).get("nodes", [])}
+    # A cross-floor link ends on a "connector" node that stands for a terminal on another floor.
+    for nid, n in nodes.items():
+        remote = (n.get("connector") or {}).get("remoteTerminalId")
+        if n.get("kind") == "connector" and remote in terminals:
+            by_node.setdefault(nid, remote)
     note_items = {item["note"]["nodeId"]: item["note"] for item in snapshot.get("items", []) if item.get("note")}
     links, notes = [], {}
     for c in snapshot.get("canvas", {}).get("connections", []):
