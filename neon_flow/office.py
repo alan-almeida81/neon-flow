@@ -7,6 +7,9 @@ import re
 import time
 
 
+LOOP_PAUSE = 20   # s a Maestro shows its finished turn before reading as in loop again
+
+
 def _ts(value) -> float:
     """Wire ISO timestamps or runtime epoch-ms → epoch seconds."""
     if isinstance(value, (int, float)):
@@ -87,6 +90,8 @@ def build_office(snapshot: dict, runtime: dict, board: dict, memory: dict) -> di
         name = terminal.get("name") or "Agente"
         names[terminal["id"]] = name
         record = by_agent.get((terminal.get("roleName"), name.casefold())) or records.get(terminal.get("roleName"), {})
+        if not record and not terminal.get("roleName"):   # roleless shells (Integrador) report under their own name
+            record = next((r for (_, n), r in by_agent.items() if n == name.casefold()), {})
         if name.casefold() == "lumen":
             record = runtime.get("lumen") or {}
         status = record.get("status", "unknown")
@@ -106,6 +111,12 @@ def build_office(snapshot: dict, runtime: dict, board: dict, memory: dict) -> di
                 *[machine_for(t) for t in tools],
             ) if m))
         machine = machines[0] if machines else None
+        # The Maestro (Orquestrador) runs an agent loop: a finished turn shows as completed for a moment,
+        # then the loop reads as running again until it is interrupted or stops answering.
+        loop = bool(terminal.get("isManager")) and state == "completed" and (
+            time.time() - _ts(terminal.get("lastActiveAt") or record.get("updatedAt") or 0) > LOOP_PAUSE)
+        if loop:
+            state = "working"
         # Wire activity alone cannot attach a completed turn's card to a new turn.
         task = card.get("name") or record.get("taskCode")
         if state == "working" and status != "working":
@@ -114,10 +125,12 @@ def build_office(snapshot: dict, runtime: dict, board: dict, memory: dict) -> di
             "id": terminal["id"], "name": name, "role": terminal.get("roleName", ""),
             "machine": machine, "machines": machines, "mode": record.get("mode"),
             "kind": terminal.get("agentType", ""), "manager": bool(terminal.get("isManager")),
-            "state": state, "attention": attention, "live": live,
+            "state": state, "loop": loop, "attention": attention, "live": live,
+            "runtimeStatus": status,   # what the agent itself reports (Integrador: working = merge running)
+            "watching": record.get("watching") or [],   # Vigia: team agents under watch this cycle
             "task": task,
             "column": lists.get(card.get("listId")) if task else None,
-            "tools": tools if state == "working" else [], "lastTools": tools,
+            "tools": tools if state == "working" and not loop else [], "lastTools": tools,
             "skills": record.get("skills", []), "model": (record.get("models") or {}).get(terminal.get("agentType")) or record.get("model"),
             "lastActiveAt": int(max(_ts(terminal.get("lastActiveAt")),
                                     _ts(record.get("updatedAt") or 0)) * 1000),
@@ -126,7 +139,7 @@ def build_office(snapshot: dict, runtime: dict, board: dict, memory: dict) -> di
         before = known.get(terminal["id"])
         if before:
             if before["state"] != state:
-                label = {"working": "começou a trabalhar", "completed": "concluiu o turno",
+                label = "voltou ao loop" if loop else {"working": "começou a trabalhar", "completed": "concluiu o turno",
                          "interrupted": "foi interrompido"}.get(state, "ficou sem execução confirmada")
                 suffix = f" · {agent['task']}" if state == "working" and agent["task"] else ""
                 event("state", f"{name} {label}{suffix}", [terminal["id"]])

@@ -90,6 +90,13 @@ class BuildFlowTests(unittest.TestCase):
         self.assertEqual(next(a for a in flow['agents'] if a['id'] == 's')['color'], '')
 
 
+class IntegradorStatusTests(unittest.TestCase):
+    def test_roleless_integrador_reports_its_merge_status(self):
+        runtime = {'agents': [{'roleName': 'Integrador', 'agentName': 'Integrador', 'status': 'working', 'taskCode': '9.1'}]}
+        flow = build_flow({'items': [terminal('i', 'Integrador')]}, runtime, {}, {})
+        self.assertEqual((flow['agents'][0]['runtimeStatus'], flow['agents'][0]['task']), ('working', '9.1'))
+
+
 class PendingTriageTests(unittest.TestCase):
     LISTS = [{'id': 'la', 'name': 'A analisar'}, {'id': 'lf', 'name': 'A fazer'}]
 
@@ -142,3 +149,18 @@ class PendingTriageTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class MaestroLoopTests(unittest.TestCase):
+    def agent(self, manager, seconds_ago):
+        import time
+        item = terminal('o', 'Orquestrador', 'Orquestrador Tooling', manager=manager)
+        item['terminal']['lastActiveAt'] = (time.time() - seconds_ago) * 1000
+        runtime = {'agents': [{'roleName': 'Orquestrador Tooling', 'status': 'completed'}]}
+        return build_flow({'items': [item]}, runtime, {}, {})['agents'][0]
+
+    def test_maestro_returns_to_loop_after_showing_the_finished_turn(self):
+        self.assertEqual((self.agent(True, 5)['state'], self.agent(True, 5)['loop']), ('completed', False))
+        looping = self.agent(True, 120)
+        self.assertEqual((looping['state'], looping['loop'], looping['tools']), ('working', True, []))
+        self.assertEqual(self.agent(False, 120)['state'], 'completed')
