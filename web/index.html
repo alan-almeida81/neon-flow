@@ -277,6 +277,16 @@ footer .run{white-space:nowrap;animation:tick 60s linear infinite;padding-left:1
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const DEMO = new URLSearchParams(location.search).has("demo");
+// ?sim=lumen: preview of the Lumen ↔ Orquestrador exchange over live data, 20 s each way (LEARN then TEACH).
+const SIM = new URLSearchParams(location.search).get("sim");
+function simulate(d){
+  if (SIM !== "lumen" || !d || !d.agents) return;
+  const l = d.agents.find(a=>/lumen|hermes/i.test(`${a.name} ${a.role}`)), o = d.agents.find(a=>a.manager);
+  if (!l || !o) return;
+  Object.assign(l, {state:"working", live:true, mode: Math.floor(Date.now()/20000)%2 ? "teach" : "learn", lastActiveAt: Date.now()});
+  d.connections = (d.connections||[]).map(c=>(c.from===l.id && c.to===o.id) || (c.from===o.id && c.to===l.id) ? {...c, active:true} : c);
+}
+if (SIM) setInterval(()=>{ if (data && data.agents) render(data); }, 2000);
 const REDUCE = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const C = {red:"#ff4d5e", redDim:"#7a2230", redDeep:"#2a0b12", cyan:"#3ef2ff", yellow:"#f5ec2a", green:"#4dffa6",
   amber:"#ffb547", violet:"#c27bff", magenta:"#ff4fd8", text:"#f2d9dc", muted:"#8e6b72", panel:"rgba(9,11,22,.94)", fail:"#ff2a4f"};
@@ -1879,6 +1889,7 @@ addEventListener("resize", ()=>{ drawTrace(); if (scene.mode==="overview" && !tw
 
 /* ================= panels ================= */
 function render(d){
+  simulate(d);
   data = d;
   $("ws").textContent = d.workspace || "—";
   $("live").textContent = d.agents.filter(a=>a.state==="working").length;
