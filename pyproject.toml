@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "neon-flow"
-version = "0.3.0"
+version = "0.4.0"
 description = "Console cyberpunk do fluxo de agentes do Maestri (Maestri Wire): mapa ao vivo, avisos de decisão e terminal completo."
 readme = "README.md"
 license = "MIT"
