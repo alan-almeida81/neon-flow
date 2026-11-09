@@ -2238,7 +2238,7 @@ function demo(){
   const ev = (kind,text)=>{events.unshift({at:now(),kind,text});events.length=Math.min(events.length,60)};
   function step(){
     tick++;
-    const a = ag[3 + Math.floor(Math.random()*(ag.length-3))];
+    const pick = ag.filter(x=>x.kind==="stage" && x.slot!=="integracao"), a = pick[Math.floor(Math.random()*pick.length)];   // the Integrador follows its merge cycle below
     const card = `9.${1+Math.floor(Math.random()*6)} Ajustar pipeline`;
     if (a.state==="working"){ a.state = Math.random()<.85?"completed":"interrupted"; a.tools=[]; ev("state",`${a.name} ${a.state==="completed"?"concluiu o turno":"foi interrompido"}`);
       a.tail=[...a.tail.slice(-4), a.state==="completed"?"✔ etapa registrada":"✖ turno interrompido"]; }
@@ -2257,6 +2257,27 @@ function demo(){
     { const ph = tick%14, l = ag[1]; l.mode = ph<6 ? "teach" : "learn";
       const st = (ph<4 || (ph>=7 && ph<11)) ? "working" : (ph===4 || ph===11) ? "completed" : "unknown";
       if (st!==l.state){ if (st==="working") ev("lumen",`Lumen ${l.mode==="teach"?"orienta o Orquestrador (TEACH)":"aprende a correção (LEARN)"}`); l.state = st; l.lastActiveAt = now(); } }
+    // Vigia: one cycle every 8 ticks (20 s) over the team agents; it keeps watching whoever is at work.
+    { const v = ag[2], team = ag.filter(x=>/^(Prisma|Forja|Sentinela)-/.test(x.name)), st = x=>x.state==="working" ? "TRABALHANDO" : "OCIOSO";
+      if (tick%8===1){ v.cycleAt = now(); v.nextAt = now()+20000; v.interval = 20; v.analyzed = team.map(x=>({agent:x.name, card:x.task ? x.task.split(" ")[0] : "-", state:st(x)})); v.lastActiveAt = now(); }
+      v.watching = team.filter(x=>x.state==="working").map(x=>({agent:x.name, card:x.task ? x.task.split(" ")[0] : "-", stage:x.slot, state:"TRABALHANDO"}));
+      v.runtimeStatus = v.watching.length ? "working" : "completed"; v.state = "working"; }
+    // Integrador: a squash merge every 16 ticks, 5 ticks long; every third one fails. Countdown between merges.
+    { const g = ag[4], ph = tick%16, merging = ph>=10 && ph<15, n = Math.floor(tick/16);
+      if (merging && g.runtimeStatus!=="working"){ g.task = `9.${3+n%4} Ajustar pipeline`; ev("state",`Integrador começou o squash merge · ${g.task}`); }
+      if (!merging && g.runtimeStatus==="working") ev("state",`Integrador ${n%3===2?"falhou no merge":"integrou"} · ${g.task}`);
+      g.runtimeStatus = merging ? "working" : ph===15 && n%3===2 ? "failed" : "completed";
+      g.state = merging ? "working" : "completed"; g.tools = merging ? ["Bash"] : []; g.lastTools = ["Bash"];
+      if (merging) g.lastActiveAt = now(); else g.task = null;
+      g.interval = 40; g.nextAt = g.nextAt && g.nextAt > now() ? g.nextAt : now()+40000; }
+    // Orquestrador: the Maestro runs an agent loop — when nobody else works it shows EM LOOP, not idle.
+    { const o = ag[0], busy = ag.some(x=>x.state==="working" && x!==o && x.kind==="stage" && x.slot!=="integracao");
+      o.state = "working"; o.loop = !busy; }
+    // Concierge: every ~60 s the triage leaves a card half-way and raises the failure card for ~15 s.
+    { const c = ag[3], ph = tick%24;
+      if (ph===18){ c.question = "9.7 Ajustar pipeline (triagem às 21:40)\nA triagem liberou o card, mas ele não foi movido para A fazer.\nMotivo: ELEGIVEL\nEvidência: etiquetas revisada e ia aplicadas.";
+        c.questionKind = "fail"; c.questionTitle = "TRIAGEM NÃO MOVEU O CARD"; c.task = "9.7"; ev("attention","Concierge: a triagem não moveu o card 9.7"); }
+      if (ph===0 && c.question){ c.question = null; c.questionKind = null; c.questionTitle = null; } }
     links = tick%2===0 && a.state==="working" ? [{from:"orq",to:a.id,kind:"message"}] : [];
     if (links.length) ev("message",`Orquestrador → ${a.name}: troca de mensagens`);
     if (tick%5===0){ const k = SHELVES[Math.floor(Math.random()*5)][0]; if (shelves[k]>0){shelves[k]--; shelves[SHELVES[SHELVES.findIndex(s=>s[0]===k)+1][0]]++; ev("card",`Card “${card}” avançou no quadro`);} }

@@ -19,7 +19,12 @@ A página (`web/index.html`) lê `GET /api/flow` a cada poucos segundos. O termi
     "questionKind": "decision",         // opcional: "decision" | "fail" (cartão de falha)
     "questionTitle": null,              // opcional: título do cartão (ex.: "TRIAGEM NÃO MOVEU O CARD")
     "task": "9.1 Ajustar pipeline", "tools": ["apply_patch"], "lastTools": [], "skills": [], "model": "claude-opus-5-5", "mode": null,
-    "color": "#FF9500", "lastActiveAt": 1731000000000, "tail": ["últimas linhas do terminal"]
+    "color": "#FF9500", "lastActiveAt": 1731000000000, "tail": ["últimas linhas do terminal"],
+    "loop": false,                      // opcional: Maestro de volta ao loop após o turno (aparece como EM LOOP)
+    "runtimeStatus": "completed",       // opcional: o que o próprio agente informa (Integrador: "working" = merge em curso)
+    "nextAt": null, "interval": null,   // opcional: próximo ciclo (epoch ms) e período (s) — contagem do Vigia/Integrador
+    "watching": [],                     // opcional (Vigia): [{"agent","card","stage","state"}] em trabalho, queda ou limite
+    "analyzed": [], "cycleAt": null     // opcional (Vigia): agentes conferidos no último ciclo e quando (epoch ms)
   }],
   "connections": [{"id": "c1", "kind": "crossFloor|note|...", "active": true, "from": "terminal-id", "to": "terminal-id", "note": null}],
   "notes": [{"id": "n1", "kind": "note", "title": "Painel", "subtitle": "", "lastModifiedAt": "...", "terminals": ["terminal-id"]}],

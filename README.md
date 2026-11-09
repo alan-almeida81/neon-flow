@@ -22,6 +22,7 @@ Mapa de quem está trabalhando, ligações energizadas, ferramentas em uso, avis
 
 - [Em ação](#em-ação)
 - [O que você vê](#o-que-você-vê)
+- [Animações por papel](#animações-por-papel)
 - [Começar em 30 segundos](#começar-em-30-segundos)
 - [Ao vivo com o Maestri](#ao-vivo-com-o-maestri)
 - [Como funciona](#como-funciona)
@@ -59,6 +60,7 @@ Um agente para e pergunta. O cartão aparece ao lado do módulo dele; **RESPONDE
 
 - Só fica na tela o que precisa da sua decisão. O Maestri sinaliza atenção a cada fim de turno, então o cartão só abre quando o terminal pergunta algo de verdade: pergunta com `?`, `(y/n)`, menu de opções, pedido de permissão ou frases como "depende de você" e "posso…?". Linhas de prompt ocioso e de rodapé do Claude Code e do Codex são ignoradas.
 - O cartão **DECISÃO PENDENTE** fica ao lado do módulo do agente, com seta apontando para ele. Ele acompanha a câmera e escolhe o lado que não cobre outros módulos. A pergunta vem do campo `question` ou do trecho do terminal que pergunta.
+- Triagem parada: se o card ficou em "A analisar", o Concierge mostra **DECISÃO PENDENTE NA TRIAGEM** (aguarda você) ou **TRIAGEM NÃO MOVEU O CARD** (o processo parou no meio), com motivo, evidência e pendência, até o card sair de lá.
 - Fim de turno sem pergunta vira uma faixa verde **✔ AGENTE concluiu**, que some sozinha em 5 s. Falhas e demais avisos vão para o **BUFFER**.
 - Fora da página: o título da aba mostra `(1) ⚠ decisão`, toca um bipe curto e, se você permitir, chega uma notificação do sistema. Clicar nela abre o agente.
 
@@ -94,6 +96,24 @@ Um agente para e pergunta. O cartão aparece ao lado do módulo dele; **RESPONDE
 <img src="docs/media/temas.png" alt="Os seis temas: Neon, Synthwave, Matriz, Azul HUD, Gelo e Ultravioleta" width="100%">
 
 Menu **TEMA**: Neon, Synthwave, Matriz, Azul HUD, Gelo e Ultravioleta. Vermelho fica reservado para falhas em todos eles. Tema e estilo de ligação ficam salvos no navegador.
+
+## Animações por papel
+
+<img src="docs/media/animacoes.png" alt="Quatro recortes: Vigia com radar e mira num agente, Integrador no squash merge, Lumen em LEARN e em TEACH com o Orquestrador" width="100%">
+
+Cada papel de controle tem uma animação própria, que só roda enquanto aquele trabalho acontece:
+
+| Papel | Quando anima | O que aparece |
+|---|---|---|
+| Lumen | em consulta | **LEARN** (Orquestrador → Lumen): órbita violeta se fechando e sinal em saltos. **TEACH** (Lumen → Orquestrador): raios dourados e sinal contínuo |
+| Integrador | só durante o merge (`runtimeStatus: "working"`) | trilhas dos PRs das equipes entrando, zíper na base e commit fundido saindo; termina com **SQUASH MERGE ✓** ou **MERGE FALHOU ✕** |
+| Vigia | a cada ciclo e enquanto houver agente em trabalho, queda ou limite | radar no medidor, mira travando no agente conferido e o nome dele no quadro (`⌕ Prisma-1 · OCIOSO 1/9`); fora de cena, o agente acende na lista de espera |
+| Orquestrador | sempre que é o Maestro | depois de cada turno mostra CONCLUÍDO por 20 s e volta a **EM LOOP** |
+
+- **Contagem regressiva:** Vigia e Integrador mostram `⟳ 0:42` até o próximo ciclo, com uma barra que esvazia (amarela nos últimos 10 s).
+- **Ícones:** de vez em quando o ícone de um agente gira como moeda, na horizontal ou na vertical.
+- **Terminal x agente:** o rótulo segue o tipo do Maestri (Claude, Codex, Gemini, AGY, OpenCode, Custom); shells de script aparecem como **TERMINAL**.
+- **Prévia:** `?sim=lumen` alterna LEARN e TEACH a cada 20 s sobre os dados reais, sem enviar nada.
 
 ## Começar em 30 segundos
 
@@ -166,7 +186,7 @@ flowchart LR
 
 | Método e caminho | O que faz |
 |---|---|
-| `GET /` | o console (`web/index.html`); `?demo=1` liga a simulação |
+| `GET /` | o console (`web/index.html`); `?demo=1` liga a simulação; `?sim=lumen` simula a troca Lumen ↔ Orquestrador |
 | `GET /api/flow` | a projeção do fluxo em JSON ([contrato](docs/CONTRATO-DE-DADOS.md)) |
 | `GET /api/terminal-stream?terminalId=<uuid>` | saída e geometria de um terminal, como Server-Sent Events |
 | `POST /api/prompt` `{terminalId, text}` | envia o texto digitado àquele terminal (até 20 mil caracteres) |
@@ -176,7 +196,7 @@ flowchart LR
 
 - **Papéis:** saem do nome e do papel de cada terminal no Maestri ([convenções](#adaptar-a-outro-projeto)). As equipes vêm dos *floors*, por exemplo "Equipe Alfa".
 - **Ligações:** as conexões do canvas do Maestri viram feixes roteados em faixas, com trilhas a 90° e 45° que contornam os módulos. A ordem das faixas é fixa; o desenho de cada ligação (posição das dobras, lado das curvas, estilo no modo AMBOS e cores) é sorteado a cada abertura da página, então o visual muda sem perder a leitura.
-- **Estados:** ciano = executando, verde = concluído, cinza = ocioso, vermelho = interrompido ou falha. Uma mudança de estado faz o módulo tremer e expandir um contorno.
+- **Estados:** ciano = executando, verde = concluído, cinza = ocioso, vermelho = interrompido ou falha. Uma mudança de estado faz o módulo tremer e expandir um contorno. O Maestro volta a **EM LOOP** 20 s depois de concluir um turno.
 - **Ferramentas:** as do turno aparecem numeradas sob o módulo, entram digitadas e ficam verdes com ✔ ao terminar.
 - **Eventos:** o servidor compara cada feed com o anterior e transforma as diferenças em eventos (estado, atenção, ferramenta, mensagem, nota, rotina, card). Eles alimentam o **BUFFER**, a linha do tempo e o letreiro inferior.
 - **Câmera:** em AO VIVO, quando quem está em cena muda, a câmera reenquadra sozinha, a menos que você esteja movendo o mapa.
