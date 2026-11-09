@@ -1106,11 +1106,55 @@ function lumenAura(ex, time){
   }
   ctx.restore();
 }
+// Integrador: squash-merge machine while it works. Each team's PR rides its own lane into the left side,
+// a zipper closes along the base, and one fused commit leaves on the right with a stamp. Fades out 20 s after the turn.
+function integradorAura(time){
+  const a = (data.agents||[]).find(x=>x.slot==="integracao"); if (!a) return;
+  const v = vis.get(a.id); if (!v || !v.shown || v.alpha < .05) return;
+  const running = a.state==="working", fade = running ? 1 : Math.max(0, 1-(Date.now()-a.lastActiveAt)/20000);
+  if (fade <= 0) return;
+  const [w,h] = size(a), x0 = v.x-w/2, x1 = v.x+w/2, y0 = v.y-h/2, y1 = v.y+h/2, pink = "#ff2d55", A = v.alpha*fade;
+  const runs = ["Alfa","Beta","Gama"].map(t=>(data.laneRuns||{})[t]);
+  const t = REDUCE ? 0 : time*(running ? 1 : .35), cycle = 2.6, k = (t % cycle)/cycle;   // one merge per cycle
+  ctx.save(); ctx.lineCap = "round";
+  // 1. three PR lanes entering from the left, team colours; a lane with a PR glows brighter
+  [0,1,2].forEach(i=>{
+    const col = TEAM[i+1][1], hot = runs[i] && runs[i].pr, ly = y0 + h*(.28+.22*i), lx = x0-64;
+    ctx.globalAlpha = A*(hot ? .55 : .22); ctx.strokeStyle = col; ctx.lineWidth = 1;
+    ctx.setLineDash([3,5]); ctx.lineDashOffset = -t*24; ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(x0-4, ly); ctx.stroke(); ctx.setLineDash([]);
+    if (REDUCE) return;
+    const p = ((t*.9 + i*.33) % 1), px = lx + (x0-10-lx)*p;   // packet glides in and is swallowed at the edge
+    ctx.globalAlpha = A*Math.min(1, (1-p)*4)*(hot ? 1 : .55); ctx.fillStyle = "#0a0a12"; ctx.strokeStyle = col; ctx.lineWidth = 1.2;
+    ctx.shadowColor = col; ctx.shadowBlur = hot ? 10 : 4; chamfer(px-11, ly-6, 22, 12, 3); ctx.fill(); ctx.stroke(); ctx.shadowBlur = 0;
+    ctx.fillStyle = col; ctx.font = MONO(7); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("PR", px, ly+.5);
+  });
+  // 2. zipper along the base: teeth from both sides interlock as the slider runs left → right
+  const zy = y1+9, n = Math.max(8, Math.floor((w-24)/9)), zx = x0+12, step = (w-24)/n, closed = REDUCE ? 1 : Math.min(1, k/.75);
+  for (let i=0;i<n;i++){
+    const tx = zx + i*step + step/2, shut = (i+.5)/n <= closed, gap = shut ? 0 : 4, up = i%2===0;
+    ctx.globalAlpha = A*(shut ? .95 : .45); ctx.fillStyle = up ? pink : "#2de2e6";
+    ctx.fillRect(tx-2.5, up ? zy-4-gap : zy+gap, 5, 4);
+  }
+  if (!REDUCE && k < .75){ const sx = zx + (w-24)*closed;
+    ctx.globalAlpha = A; ctx.fillStyle = "#fff"; ctx.shadowColor = pink; ctx.shadowBlur = 12;
+    ctx.beginPath(); ctx.moveTo(sx-5, zy-7); ctx.lineTo(sx+6, zy); ctx.lineTo(sx-5, zy+7); ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0; }
+  // 3. the fused commit leaves on the right once the zipper is shut, with a SQUASH MERGE stamp
+  if (!REDUCE && k >= .75){ const q = (k-.75)/.25, ox = x1+6+q*70, oy = v.y;
+    ctx.globalAlpha = A*(1-q*.6); ctx.strokeStyle = pink; ctx.lineWidth = 2; ctx.shadowColor = pink; ctx.shadowBlur = 14;
+    ctx.beginPath(); ctx.moveTo(x1+2, oy); ctx.lineTo(ox, oy); ctx.stroke();
+    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(ox, oy, 4.5, 0, TAU); ctx.fill(); ctx.shadowBlur = 0;
+    const s = 1 + .25*Math.max(0, 1-q*3);   // stamp lands with a small punch
+    ctx.save(); ctx.translate(x1+52, v.y-22); ctx.rotate(-.08); ctx.scale(s, s); ctx.globalAlpha = A*(q < .8 ? 1 : (1-q)*5);
+    ctx.strokeStyle = pink; ctx.lineWidth = 1.6; chamfer(-46, -9, 92, 18, 4); ctx.stroke();
+    ctx.fillStyle = pink; ctx.font = MONO(9); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("SQUASH MERGE ✓", 0, 1); ctx.restore(); }
+  ctx.restore();
+}
 function notePoint(id){ const v = noteVis.get(id); return [v.x, v.y-NH/2]; }
 function drawConnections(time){
   // Only real Maestri canvas connections are drawn.
   const plan = hubPlan(), ex = lumenExchange();
   if (ex) lumenAura(ex, time);
+  integradorAura(time);
   (data.connections||[]).forEach((c, ci)=>{
     const A = agentById(c.from), B = agentById(c.to), key = "c|"+c.id;
     let bundle = plan.get(c.id), alpha = 1;
