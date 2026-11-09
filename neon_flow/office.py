@@ -128,7 +128,8 @@ def build_office(snapshot: dict, runtime: dict, board: dict, memory: dict) -> di
             "state": state, "loop": loop, "attention": attention, "live": live,
             "runtimeStatus": status,   # what the agent itself reports (Integrador: working = merge running)
             "watching": record.get("watching") or [],   # Vigia: team agents under watch this cycle
-            "nextAt": record.get("nextAt"), "interval": record.get("interval"),   # Vigia/Integrador: next cycle (epoch ms, s)
+            "nextAt": record.get("nextAt"), "interval": record.get("interval"),
+            "analyzed": record.get("analyzed") or [], "cycleAt": record.get("cycleAt"),   # Vigia: agents checked in the last cycle   # Vigia/Integrador: next cycle (epoch ms, s)
             "task": task,
             "column": lists.get(card.get("listId")) if task else None,
             "tools": tools if state == "working" and not loop else [], "lastTools": tools,

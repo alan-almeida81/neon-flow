@@ -99,6 +99,7 @@ body.maxed{overflow:hidden} body.maxed main{z-index:15}
 .chip i{width:7px;height:7px;background:var(--st,var(--muted))}
 .chip small{color:var(--muted)}
 .chip.att{border-color:var(--yellow)} .chip.att i{background:var(--yellow)}
+.chip.scan{border-color:var(--yellow);box-shadow:0 0 10px rgba(252,238,10,.55)} .chip.scan i{background:var(--yellow)}
 .trace{margin-top:12px;height:150px;border:1px solid var(--red-dim);clip-path:var(--cut);background:rgba(7,7,13,.6)}
 .trace canvas{display:block;width:100%;height:100%}
 .section-title{font-family:var(--mono);font-size:11px;letter-spacing:.3em;color:var(--red);margin:4px 0 8px;display:flex;align-items:center;gap:10px}
@@ -1168,15 +1169,32 @@ function mergeEnd(a, v, now){
 // A sweep turns around its gauge and a dashed beam locks a reticle on the agent being checked, rotating through
 // the watched agents every few seconds. Nothing to watch (all idle) or the Vigia stopped: the animation stops.
 const VIGIA_TURN = 3.2;   // seconds on each watched agent
+// Each cycle (countdown hits zero) the Vigia checks every team agent: replay that pass one agent at a time
+// for a few seconds after the cycle, then fall back to the agents still under watch (working, down, limit).
+const vigiaScanLen = n => Math.max(6, n*1.1);   // seconds
+const vigiaCycle = {at:null, seenAt:0};   // the pass starts when the page receives a new cycle (polling lags a few s)
 function vigiaTarget(a){
+  if (a.cycleAt && a.cycleAt !== vigiaCycle.at){ vigiaCycle.at = a.cycleAt; vigiaCycle.seenAt = Date.now()-a.cycleAt > 20000 ? a.cycleAt : Math.max(a.cycleAt, Date.now()-1000); }   // no replay of an old cycle on load
+  const seen = (a.analyzed||[]).filter(w=>w && w.agent), el = a.cycleAt ? (Date.now() - vigiaCycle.seenAt)/1000 : -1;
+  if (seen.length && el >= 0 && el < vigiaScanLen(seen.length)){
+    const i = Math.min(seen.length-1, Math.floor(el / (vigiaScanLen(seen.length)/seen.length)));
+    return {...seen[i], scan:true, i, n:seen.length};
+  }
   const list = (a.watching||[]).filter(w=>w && w.agent); if (a.runtimeStatus !== "working" || !list.length) return null;
   return list[Math.floor(Date.now()/1000/VIGIA_TURN) % list.length];
+}
+// waiting-list chip of the agent being checked (idle agents are off stage); re-applied each frame since the list re-renders
+function markScan(id){
+  document.querySelectorAll(".chip.scan").forEach(c=>{ if (c.dataset.id !== id) c.classList.remove("scan"); });
+  if (id) document.querySelector(`.chip[data-id="${CSS.escape(id)}"]`)?.classList.add("scan");
 }
 const WATCH_COLOR = {"QUEDA":"#ff3b5c", "LIMITE":"#fcee0a", "SEM REVISOR":"#fcee0a", "SEM TELA":"#ff3b5c"};
 function vigiaAura(time){
   const a = (data.agents||[]).find(x=>x.slot==="vigia"); if (!a) return;
-  const tg = vigiaTarget(a), v = vis.get(a.id); if (!tg || !v || !v.shown || v.alpha < .05) return;
-  const [w,h] = size(a), col = WATCH_COLOR[tg.state] || "#fcee0a", rr = 15, gx = v.x-w/2+14+rr, gy = v.y+3, t = REDUCE ? 0 : time;
+  const tg = vigiaTarget(a), v = vis.get(a.id);
+  markScan(tg && (data.agents||[]).find(x=>x.name===tg.agent)?.id);
+  if (!tg || !v || !v.shown || v.alpha < .05) return;
+  const [w,h] = size(a), col = WATCH_COLOR[tg.state] || (tg.scan ? C.cyan : "#fcee0a"), rr = 15, gx = v.x-w/2+14+rr, gy = v.y+3, t = REDUCE ? 0 : time;
   ctx.save(); ctx.globalAlpha = v.alpha;
   // radar sweep: a fading wedge turning around the gauge, plus an expanding ping
   if (!REDUCE){ const ang = t*2.4;
@@ -1195,7 +1213,7 @@ function vigiaAura(time){
     for (const [cx,cy,dx,dy] of [[x0,y0,1,1],[x1,y0,-1,1],[x0,y1,1,-1],[x1,y1,-1,-1]]){
       ctx.beginPath(); ctx.moveTo(cx, cy+dy*L); ctx.lineTo(cx, cy); ctx.lineTo(cx+dx*L, cy); ctx.stroke(); }
     ctx.shadowBlur = 0; ctx.font = MONO(9); ctx.fillStyle = col; ctx.textAlign = "left"; ctx.textBaseline = "bottom";
-    ctx.fillText(`◉ VIGIA · ${tg.state}`, x0, y0-3);
+    ctx.fillText(`${tg.scan ? "⌕ ANALISANDO" : "◉ VIGIA"} · ${tg.state}`, x0, y0-3);
   }
   ctx.restore();
 }
@@ -1509,7 +1527,7 @@ function drawGauge(a, rx, ry, rr, sc, live, time, ctrl, chief){
   const ic = a.attention ? C.yellow : a.state==="unknown" ? rgba(C.text,.45) : sc;
   const tear = v && !REDUCE && Date.now()-v.glitch < 320 ? ((hash(a.id+Math.floor(Date.now()/45))%5)-2) : 0;
   roleIcon(a, rx, ry, rr*.58, ic, live, tear);
-  if (g.center){ ctx.font = MONO(ctrl?8.5:9); ctx.fillStyle = chief ? C.yellow : C.muted; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  if (g.center && g.center !== ago(a.lastActiveAt)){ ctx.font = MONO(ctrl?8.5:9); ctx.fillStyle = chief ? C.yellow : C.muted; ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(g.center, rx, ry+rr+(ctrl?7:9)); }
 }
 function drawModule(a, time, now){
@@ -1538,8 +1556,7 @@ function drawModule(a, time, now){
   ctx.fillStyle="#0a0a12"; ctx.textAlign="left"; ctx.textBaseline="middle"; ctx.fillText(fit(ctx,a.name.toUpperCase(),tabW-12), x+17, y-4);
   ctx.font=MONO(9); ctx.fillStyle=rgba(tc,.85); ctx.textAlign="right";
   const prog = progLabel(a);
-  const since = ago(a.lastActiveAt), dup = gaugeOf(a, sc, live, Date.now()).center === since;   // the recency gauge already shows it
-  ctx.fillText(fit(ctx, [prog, modelLabel(a.model), dup ? "" : since].filter(Boolean).join(" · "), w-56), x+w-10, y+11);
+  ctx.fillText(fit(ctx, [prog, modelLabel(a.model), ago(a.lastActiveAt)].filter(Boolean).join(" · "), w-56), x+w-10, y+11);
   const rr = ctrl ? 15 : 19, rx = x+14+rr, ry = y+h/2+(ctrl?3:2);
   drawGauge(a, rx, ry, rr, sc, live, time, ctrl, chief);
   const tx = rx+rr+10, tw = x+w-10-tx; ctx.textAlign="left";
@@ -1558,8 +1575,10 @@ function drawModule(a, time, now){
     const rt = routinesOf(a), tg = a.slot==="vigia" ? vigiaTarget(a) : null;
     if (a.slot==="vigia"){   // the Vigia shows who it is checking right now; idle when nobody is at work
       const n = (a.watching||[]).length;
-      ctx.fillStyle = tg ? (WATCH_COLOR[tg.state] || C.yellow) : rgba(C.muted,.7);
-      ctx.fillText(fit(ctx, tg ? `◉ ${tg.agent}${tg.card && tg.card!=="-" ? " · "+tg.card : ""} · ${tg.state}${n>1 ? `  (${n})` : ""}` : "◌ ninguém em trabalho", tw), tx, y+58); }
+      ctx.fillStyle = tg ? (WATCH_COLOR[tg.state] || (tg.scan ? C.cyan : C.yellow)) : rgba(C.muted,.7);
+      const card = tg && tg.card && tg.card!=="-" ? " · "+tg.card : "";
+      ctx.fillText(fit(ctx, !tg ? "◌ ninguém em trabalho" : tg.scan ? `⌕ ${tg.agent}${card} · ${tg.state}  ${tg.i+1}/${tg.n}`
+        : `◉ ${tg.agent}${card} · ${tg.state}${n>1 ? `  (${n})` : ""}`, tw), tx, y+58); }
     else if (a.task){ ctx.fillStyle=C.yellow; ctx.fillText(fit(ctx,"▸ "+a.task,tw), tx, y+58); }
     else if (rt.length){ const r0 = rt[0]; ctx.fillStyle=r0.enabled?C.cyan:C.muted;
       ctx.fillText(fit(ctx,`⟳ ${r0.name} ${every(r0.every)} · ${r0.enabled?"ativa":"pausada"}${rt.length>1?` +${rt.length-1}`:""}`,tw), tx, y+58); }
